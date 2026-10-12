@@ -1,184 +1,114 @@
-# Product Requirement Document (PRD)
+# Dual Expense - Product Requirement Document
 
 ## 1. Executive Summary
 
-**Project Name:** LedgerLite (2-Person Household Expense Logger)
+Dual Expense is a lightweight expense logger for a two-person household. It records who paid each expense, shows each person's monthly spending alongside the household total, and avoids split-bill calculations, balances owed, and settlement workflows.
 
-**Objective:** A lightweight, minimal, and modern 2-person expense tracking web application. The application enables two pre-configured household users to log individual expenses, view their spending breakdowns side-by-side, and monitor their combined household total without the overhead or complexity of user logins, split-bill math, or debt tracking.
+## 2. Target Audience and Core Principles
 
-## 2. Target Audience & Core Principles
+- **Users:** Exactly two household members sharing one private application instance.
+- **Private access:** The first release has no application sign-in. The deployment must be reachable only through the household's private network. Production hosting is not selected yet.
+- **Single payer:** Each expense is paid in full by exactly one of the two fixed users.
+- **Simplicity:** No split calculations, balance owing, or debt settlement.
+- **Currency:** USD only for the first release.
 
-* **Users:** Exactly 2 household members sharing expense visibility (no multi-tenant access or login screens).
+## 3. Technology and Development Setup
 
-* **Core Philosophy:**
+| Layer | Technology | Constraints |
+|---|---|---|
+| Language | Java 25 | Backend |
+| Backend | Spring Boot 4.x | Spring Web, Spring Data JPA, Spring Validation; no Spring Security for the private-network-only first release |
+| Frontend | React with TypeScript | Single-page application; no server-side rendering requirement |
+| Styling | Tailwind CSS | Follow `docs/DESIGN.md` |
+| Database | PostgreSQL | Store users, categories, and expenses |
+| Backend build | Maven | Use a Maven wrapper for reproducible builds |
+| Local database | Docker Compose | Run PostgreSQL in a persistent volume; run application processes natively |
+| Production deployment | Undecided | Choose hosting and backup operations in a later deployment-planning step |
 
-  * **Zero Auth Overhead:** No passwords, logins, or session tokens. The application loads directly into the shared household view.
+## 4. Household Users and Categories
 
-  * **Simplicity First:** No split calculations, no balance owing, no settling up.
+- Seed exactly two fixed profiles named **User 1** and **User 2**.
+- User 1 uses the indigo payer accent `#6366F1`; User 2 uses the teal payer accent `#14B8A6`.
+- The application has no user-name configuration or login flow in v1.
+- Seed the fixed categories: Groceries, Housing/Rent, Utilities, Dining, Transport, Entertainment, Subscriptions, and Other.
+- V1 has no UI for adding or editing categories.
 
-  * **Single Payer:** Every expense is paid in full by either User 1 or User 2.
+## 5. Functional Requirements
 
-  * **High Whitespace & Minimal Design:** Modern Nordic/Japanese minimalist aesthetic, avoiding corporate clutter.
+### 5.1 Dashboard
 
-## 3. Technology Stack Specification
+- Default to the current calendar month.
+- Allow navigation to the current month and past months; future months are not selectable.
+- Show the household total and individual totals for the selected month.
+- Show each user's top spending category for the selected month.
+- Show a chronological expense feed for the selected month, ordered by expense date descending.
+- Each feed row shows date, optional description, category, amount in USD, and payer.
+- Follow the consolidated and individual spending presentation in `docs/DESIGN.md`.
 
-| 
+### 5.2 Add an Expense
 
-| **Architecture Layer** | **Technology Choice** | **Details / Constraints** | 
-| **Language** | Java 25 | Leveraging modern Java features and virtual threads. | 
-| **Framework** | Spring Boot 4.x | Spring Web, Spring Data JPA, Spring Validation (No Spring Security needed). | 
-| **Frontend UI** | React / Next.js (TypeScript) + Tailwind CSS | Minimalist component library matching Stitch AI design specs (`Plus Jakarta Sans` / `Geist` font). | 
-| **Database** | PostgreSQL | Relational DB storing users, categories, and expense records. | 
-| **Build & Tooling** | Maven / Gradle + Docker | Containerized build environment for Java 25 runtime. | 
+The form provides:
 
-## 4. User System & Identity Model
+- A required positive amount with at most two decimal places, stored as an exact decimal value.
+- A required payer selection containing exactly one of User 1 or User 2.
+- A required expense date defaulting to today; today or earlier is allowed, not future dates. Provide Today and Yesterday shortcuts.
+- A required category selected from the seeded categories.
+- An optional description of up to 255 characters.
+- A Save Expense action.
 
-* **Fixed 2-User Profiles:** The application runs on a single household context containing pre-seeded profiles:
+### 5.3 Delete an Expense
 
-  * **User 1** (e.g., Alex - Indigo Theme `#6366F1`)
+- A user can delete an expense from the feed after confirming the action.
+- V1 does not support editing an existing expense.
+- Deletion removes the expense from subsequent feed and summary results.
 
-  * **User 2** (e.g., Sam - Teal Theme `#14B8A6`)
+## 6. Data and API
 
-* **No Authentication:** Access is completely open within the hosted instance network. Any user opening the URL can log expenses for either User 1 or User 2.
+### 6.1 Data Model
 
-## 5. Functional Requirements & Feature Specifications
+The relational model consists of:
 
-### Module 1: Dashboard / Home Page
+- `users`: seeded household profiles with a name and payer accent color.
+- `categories`: seeded category names and icon identifiers.
+- `expenses`: positive `DECIMAL(10, 2)` amount, `DATE` expense date, optional description, required payer and category foreign keys, and creation timestamp.
 
-#### 1.1 Consolidated Household Summary (Hero Section)
+Seed the two fixed users and eight fixed categories through versioned database migrations. The database must enforce positive amounts and valid payer/category references.
 
-* **Combined Total:** Prominently display total monthly spending across both users (`User 1 Total + User 2 Total`).
+### 6.2 REST API
 
-* **Month Selector:** Simple selector to navigate between past, present, and future months (defaults to current month).
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/v1/dashboard/summary?month=YYYY-MM` | Household and per-user totals and top categories for a month |
+| `GET` | `/api/v1/expenses?month=YYYY-MM` | Expenses for a month, ordered by expense date descending |
+| `POST` | `/api/v1/expenses` | Create an expense |
+| `DELETE` | `/api/v1/expenses/{id}` | Delete an expense |
+| `GET` | `/api/v1/categories` | Return the seeded categories |
+| `GET` | `/api/v1/users` | Return the two seeded users |
 
-#### 1.2 Individual User Summaries
+The server validates request data as well as database constraints. Invalid payer or category identifiers, non-positive amounts, amounts with more than two decimal places, future expense dates, and descriptions exceeding 255 characters must be rejected with an explicit client error.
 
-* **Side-by-Side Cards:** Equal-width dual layout displaying:
+## 7. Design System
 
-  * **User 1 Summary Card:** User avatar/name, accent color indicator, total spending this month, and top spending category.
+`docs/DESIGN.md` is the source of truth for the UI palette, typography, spacing, shapes, and component styling. This PRD defines product behavior and must not duplicate or override design tokens.
 
-  * **User 2 Summary Card:** User avatar/name, accent color indicator, total spending this month, and top spending category.
+## 8. Out of Scope for V1
 
-#### 1.3 Recent Transactions Feed
+- Application authentication and multi-household tenancy.
+- Expense editing, split payments, balances, and settlement.
+- Future-dated expenses and recurring or planned expenses.
+- Custom categories.
+- CSV export.
+- Production hosting selection and automated production backups.
+- A hard sub-50ms API latency service-level objective.
 
-* **Chronological List:** Displays recent entries sorted by `expense_date` descending.
+## 9. Acceptance Criteria
 
-* **Line Item Attributes:**
-
-  * Transaction Date
-
-  * Description / Notes
-
-  * Category Badge / Icon
-
-  * Expense Amount
-
-  * Payer Badge (indicating whether User 1 or User 2 paid)
-
-* **Quick Actions:** Inline delete action per item.
-
-### Module 2: Add Expense (Modal or Dedicated View)
-
-#### 2.1 Expense Form Inputs
-
-1. **Amount Input:**
-
-   * Prominent, large numeric text field (e.g., `$ 0.00`).
-
-   * Enforces two decimal places and positive floating-point values.
-
-2. **Payer Selector ("Who Spent This?"):**
-
-   * Single-selection 2-option toggle between `[ User 1 ]` or `[ User 2 ]`.
-
-   * Exactly 1 payer selected per transaction (no splits or multi-payer options).
-
-3. **Date Selector:**
-
-   * Minimal date picker input default-set to **Today**.
-
-   * Quick toggles for `Today`, `Yesterday`, or custom calendar selection.
-
-4. **Category Selector:**
-
-   * Visual grid/pills of pre-defined categories (Groceries, Housing/Rent, Utilities, Dining, Transport, Entertainment, Subscriptions, Other).
-
-5. **Details / Notes:**
-
-   * Single-line text input field for short descriptions (e.g., *"Weekly grocery run"*).
-
-6. **Form Action:**
-
-   * Full-width clean primary submit button ("Save Expense").
-
-## 6. Technical Architecture & Data Schema
-
-### 6.1 Database Schema (SQL)
-
-```
--- Seeded Users Table (Strictly 2 rows)
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    avatar_url VARCHAR(255),
-    accent_color VARCHAR(7) NOT NULL -- '#6366F1' or '#14B8A6'
-);
-
--- Expense Categories Table
-CREATE TABLE categories (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    icon_name VARCHAR(50) NOT NULL
-);
-
--- Expenses Table
-CREATE TABLE expenses (
-    id BIGSERIAL PRIMARY KEY,
-    amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
-    expense_date DATE NOT NULL,
-    description VARCHAR(255),
-    payer_id BIGINT NOT NULL REFERENCES users(id),
-    category_id BIGINT NOT NULL REFERENCES categories(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Seed Initial Users
-INSERT INTO users (name, accent_color) VALUES ('User 1', '#6366F1'), ('User 2', '#14B8A6');
-
-```
-
-### 6.2 REST API Specification
-
-| **HTTP Method** | **Endpoint** | **Description** | **Query / Request Payload** | 
-| **GET** | `/api/v1/dashboard/summary` | Fetch household, User 1, and User 2 total metrics | `?month=YYYY-MM` | 
-| **GET** | `/api/v1/expenses` | Retrieve chronological expense feed | `?month=YYYY-MM` | 
-| **POST** | `/api/v1/expenses` | Create a new expense entry | `{ amount, expenseDate, payerId, categoryId, description }` | 
-| **DELETE** | `/api/v1/expenses/{id}` | Delete an expense entry | N/A | 
-| **GET** | `/api/v1/categories` | List active expense categories | N/A | 
-| **GET** | `/api/v1/users` | Fetch the 2 household user profiles | N/A | 
-
-## 7. Design System & UI Specifications
-
-* **Design Aesthetic:** Minimalist Nordic/Japanese software design.
-
-* **Color Palette:**
-
-  * Canvas Background: `#F9F9FB`
-
-  * Card Container: `#FFFFFF`
-
-  * Text Color: `#111827` (Dark Charcoal)
-
-  * User 1 Accent: `#6366F1` (Soft Indigo)
-
-  * User 2 Accent: `#14B8A6` (Muted Teal)
-
-* **Borders & Radius:** Ultra-light 1px borders (`#E5E7EB`), no heavy drop shadows, smooth 10px rounded corners (`rounded-lg`).
-
-## 8. Non-Functional Requirements
-
-1. **Response Time:** Sub-50ms API response times for spending metrics and transaction updates.
-
-2. **Data Validation:** Enforce positive decimal checks on amounts and strict foreign-key verification for `payer_id` and `category_id`.
-
-3. **Simplicity:** Clean, dependency-light code structure across both Spring Boot 4 and the React frontend.
+- The local development environment can start PostgreSQL with Docker Compose and run the backend and frontend against it.
+- A new database is populated with exactly the two fixed users and eight categories.
+- A valid expense appears in the selected month's feed and updates household and payer totals.
+- Invalid amounts, future dates, and invalid payer/category references are rejected.
+- The dashboard supports current and past months and does not allow future-month selection.
+- A confirmed deletion removes the expense from the feed and recalculates the affected totals.
+- The UI is responsive and follows `docs/DESIGN.md`.
+- Tests cover the business rules and the API's create, list, summary, and delete behavior.
+- Correctness and responsive user experience take priority over a hard latency target for the small household dataset.

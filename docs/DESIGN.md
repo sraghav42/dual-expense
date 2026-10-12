@@ -1,5 +1,5 @@
 ---
-name: Nordic Ledger
+name: Dual Expense
 colors:
   surface: '#f9f9f8'
   surface-dim: '#dadad9'
@@ -48,6 +48,14 @@ colors:
   background: '#f9f9f8'
   on-background: '#1a1c1c'
   surface-variant: '#e2e2e2'
+  payer-user-1: '#6366f1'
+  on-payer-user-1: '#4338ca'
+  payer-user-1-container: '#eef2ff'
+  payer-user-1-outline: '#c7d2fe'
+  payer-user-2: '#14b8a6'
+  on-payer-user-2: '#0f766e'
+  payer-user-2-container: '#ccfbf1'
+  payer-user-2-outline: '#99f6e4'
 typography:
   headline-xl:
     fontFamily: Geist
@@ -137,46 +145,50 @@ spacing:
 
 ## Brand & Style
 
-This design system draws direct inspiration from Scandinavian functionalism and Dieter Rams’ "ten principles for good design": unobtrusive, honest, thorough down to the last detail, and stripped of ornamental excess. Designed specifically for cohabiting couples, partners, and collaborative duos managing shared finances, it replaces financial anxiety and dense ledger fatigue with an atmosphere of absolute clarity, calm, and mutual trust.
+This design system draws direct inspiration from Scandinavian functionalism and Dieter Rams’ "ten principles for good design": unobtrusive, honest, thorough down to the last detail, and stripped of ornamental excess. Designed specifically for 2-user households and partners tracking individual and shared spending, it replaces financial anxiety and complex ledger fatigue with an atmosphere of absolute clarity, calm, and mutual transparency.
 
-The interface prioritizes high-order legibility, deliberate architectural rhythm, and quiet confidence. Financial friction is eliminated through disciplined visual hierarchy, generous whitespace, tactile clarity in monetary values, and precise status communication. Every element exists solely to inform or facilitate action, rendering complex splits, balances, and shared ledgers effortlessly comprehensible.
+The interface avoids split-bill calculations, owed balances, or debt-settlement logic. Instead, it serves as a lightweight, single-payer expense logger. Every expense entry belongs to exactly one user, providing effortless side-by-side visibility into each person's monthly total while displaying a consolidated household spending metric. Financial friction is eliminated through disciplined visual hierarchy, generous whitespace, tactile monetary typography, and instant category awareness.
 
 ## Colors
 
-The palette is rooted in stone neutrals, quiet off-whites, and an understated, muted sage green accent family that signals stability and natural balance rather than institutional austerity.
+The YAML color tokens above are canonical. Component guidance below refers to those tokens rather than introducing competing color values. The payer-specific tokens distinguish the two fixed household users.
 
-- **Canvas & Backgrounds:** The core background utilizes `#F9F9F8` (Off-White Chalk), transitioning to `#FFFFFF` for elevated foreground cards and panels. Secondary surfaces and table striping sit on subtle warm stone `#F2F2EF`.
-- **Text & Contrast:** Primary text is rendered in deep charcoal `#181A19` for maximum reading comfort without the harshness of pure black. Secondary captions and labels utilize `#6B706E`, while disabled states drop to `#A2A8A5`.
-- **Primary & Accent:** The primary tone `#24332C` (Deep Pine Slate) commands high-priority actions, balance totals, and primary keylines. The secondary `#4C6B5B` (Muted Sage) and tertiary `#8A9A86` (Soft Lichen) provide refined context for positive balances, split confirmations, and active filter states.
-- **Structural Outlines:** Subtle dividing strokes and panel bounds rely strictly on `#E5E7E4`—a delicate 1px boundary providing crisp edge definition without heavy visual compartmentalization.
-- **Semantic Accents:** Owed/Debit states utilize a desaturated clay terracotta (`#A35C51`), while settled/balanced states rely on the signature muted sage (`#4C6B5B`).
+- **Canvas & Backgrounds:** Use `background` for the page canvas, `surface-container-lowest` for cards and dialogs, and the `surface-container-*` tokens for progressively differentiated surfaces.
+- **Text & Contrast:** Use `on-surface` for primary text, `on-surface-variant` for secondary text, and the corresponding `on-*` token for text on colored surfaces.
+- **Primary & Accent:** Use `primary` for primary actions and high-priority totals. `primary-container`, `secondary`, and `tertiary` provide supporting emphasis.
+- **Structural Outlines:** Use `outline-variant` for subtle dividers and component boundaries; use `outline` for stronger field or icon details.
+- **User Payer Accents:** Use the `payer-user-1*` and `payer-user-2*` tokens for payer controls and badges. Category pills use `surface-container-low`, `on-surface-variant`, and `outline-variant`.
 
 ## Typography
 
-The typographic hierarchy couples **Geist** for crisp, architectural user interface text with **JetBrains Mono** strictly reserved for monetary amounts, transaction splits, timestamps, and ledger balance alignment.
+The typographic hierarchy couples **Geist** for crisp, architectural user interface text with **JetBrains Mono** strictly reserved for monetary amounts, timestamps, and spending totals.
 
-- **Numerical Uniformity:** Using monospaced figures for all ledger entries and currency rows prevents ragged horizontal movement when viewing dynamic totals side-by-side.
+- **Numerical Uniformity:** Using monospaced figures for all expense entries and monthly sums prevents ragged horizontal movement when viewing dynamic individual and consolidated totals side-by-side.
 - **Optical Calm:** Tight negative tracking on display headlines emphasizes geometric restraint, while uppercase tags rely on generous positive tracking (`+0.06em`) for clear taxonomy labeling.
-- **Vertical Rhythm:** Headings and numeric summaries align to strict proportional baselines to maintain editorial order throughout long expense lists.
+- **Vertical Rhythm:** Headings and numeric summaries align to strict proportional baselines to maintain editorial order throughout long transaction feeds.
 
 ## Layout & Spacing
 
 The layout operates on a balanced 12-column grid on desktop (max container width: 1140px, centered) with generous margins that honor negative space as a first-class structural component.
 
-- **Desktop (≥1024px):** 12 columns with 24px gutters and 48px outer margins. Supports an asymmetric dual-pane model: primary shared ledger summary on the left (8 cols), partner settlement balance and quick split module on the right (4 cols).
-- **Tablet (768px – 1023px):** 8 columns with 20px gutters and 32px canvas margins. Content reflows vertically; overview metrics stack above transaction logs.
-- **Mobile (≤767px):** 4 columns with 12px gutters and 16px page margins. Single-column linear flow prioritizing immediate mutual balance, followed by categorized expenses with floating action triggers.
-- **Internal Rhythm:** Component padding relies strictly on geometric multiples: `space-sm` (8px) for badge and input insets, `space-md` (16px) for standard card padding, and `space-xl` (40px) for separating major functional ledger sections.
+- **Desktop (≥1024px):** 12 columns with 24px gutters and 48px outer margins. Supports an integrated 2-column layout:
+  - **Top Hero Section (12 cols):** Consolidated household monthly spending banner.
+  - **Middle Section (6 cols / 6 cols):** Side-by-side individual summary cards for User 1 and User 2.
+  - **Bottom Section (12 cols):** Chronological transaction feed with quick filtering.
+- **Tablet (768px – 1023px):** 8 columns with 20px gutters and 32px canvas margins. Content reflows vertically; overview metrics stack above the transaction log.
+- **Mobile (≤767px):** 4 columns with 12px gutters and 16px page margins. Single-column linear flow prioritizing the total household spend, followed by stacked individual user totals and a simplified expense feed with a floating "+ Add Expense" trigger.
+- **Add Expense Modal / View:** A distraction-free, centered 6-column container (max-width: 480px) with dedicated amount display, payer selector toggle, date picker, category grid, and description field.
+- **Internal Rhythm:** Component padding relies strictly on geometric multiples: `space-sm` (8px) for badge and input insets, `space-md` (16px) for standard card padding, and `space-xl` (40px) for separating major dashboard modules.
 
 ## Elevation & Depth
 
 Visual hierarchy rejects simulated physical heaviness or glossy drop shadows in favor of Dieter Rams-inspired surface discipline: flat planes delineated by fine micro-borders and ultra-subtle ambient daylight shadows.
 
-- **Structural Borders:** The primary method of surface differentiation is a clean, razor-sharp 1px line using `#E5E7E4`.
-- **Level 0 (Base Canvas):** `#F9F9F8` tint. Completely un-elevated.
-- **Level 1 (Cards, Ledger Containers):** `#FFFFFF` background bound by a 1px border (`#E5E7E4`) paired with an ambient soft blur: `box-shadow: 0 1px 3px rgba(24, 26, 25, 0.02), 0 4px 16px rgba(24, 26, 25, 0.03)`.
-- **Level 2 (Dropdowns, Popovers, Modals):** `#FFFFFF` surface, 1px border (`#E0E3DF`), with an expanded soft shadow: `box-shadow: 0 4px 12px rgba(24, 26, 25, 0.04), 0 12px 32px rgba(24, 26, 25, 0.06)`.
-- **Partner Split Indicators:** Subtle tonal fills rather than shadows indicate ownership (e.g., Partner A highlighted with 4% sage wash, Partner B highlighted with 4% neutral slate wash).
+- **Structural Borders:** The primary method of surface differentiation is a clean, razor-sharp 1px line using `outline-variant`.
+- **Level 0 (Base Canvas):** `background` token. Completely un-elevated.
+- **Level 1 (Cards, Expense Containers):** `surface-container-lowest` background bound by a 1px `outline-variant` border, paired with an ambient soft blur: `box-shadow: 0 1px 3px rgba(26, 28, 28, 0.02), 0 4px 16px rgba(26, 28, 28, 0.03)`.
+- **Level 2 (Dropdowns, Popovers, Modals):** `surface-container-lowest` surface, 1px `outline-variant` border, with an expanded soft shadow: `box-shadow: 0 4px 12px rgba(26, 28, 28, 0.04), 0 12px 32px rgba(26, 28, 28, 0.06)`.
+- **User Ownership Indicators:** Subtle tonal background washes distinguish user ownership (e.g., User 1 highlighted with soft indigo tone, User 2 highlighted with muted teal tone).
 
 ## Shapes
 
@@ -189,38 +201,41 @@ The design system maintains an architectural, restrained geometry using a `Soft`
 ## Components
 
 ### Buttons
-- **Primary:** Solid `#24332C` background, `#FFFFFF` text, 4px border radius, 40px height, inset padding `0 16px`. Hover state shifts gently to `#35483F`. Active state settles to `#1B2621`. No drop shadow.
-- **Secondary / Ghost:** Transparent background with 1px border in `#E5E7E4`, `#181A19` text. Hover state reveals `#F2F2EF` background with border `#D5D8D4`.
-- **Split Action Trigger:** 50/50 dual-segmented button grouping for toggling "Split 50/50", "You Paid", or "Partner Paid", contained in a single 1px framed cradle.
+- **Primary:** Solid `primary` background, `on-primary` text, 4px border radius, 40px height, inset padding `0 16px`. Hover and active states use `primary-container`. No drop shadow.
+- **Secondary / Ghost:** Transparent background with a 1px `outline-variant` border and `on-surface` text. Hover uses `surface-container-low` and `outline`.
 
-### Status & Categorical Pills
+### Payer Toggle Component
+- Single-payer segmented toggle button for selecting who paid for an expense entry.
+- 2-option container (`[ User 1 ]` vs `[ User 2 ]`) framed in a single 1px `outline-variant` border cradle.
+- Active state highlights the chosen user with their respective payer container and foreground tokens.
+
+### User Payer Badges & Category Pills
 - **Base Style:** Height 22px, pill-rounded (9999px), padding `0 8px`, `label-caps` typography.
-- **Settled / Paid:** Background `#EEF3EE`, text `#3D594B`, delicate 1px border `#DDE6DD`.
-- **Owed / Pending:** Background `#F8EFEF`, text `#8A473D`, delicate 1px border `#F0DDDB`.
-- **Shared Split (Neutral):** Background `#F2F2EF`, text `#525654`, delicate 1px border `#E5E7E4`.
+- **User 1 Badge:** Use `payer-user-1-container`, `on-payer-user-1`, and `payer-user-1-outline`.
+- **User 2 Badge:** Use `payer-user-2-container`, `on-payer-user-2`, and `payer-user-2-outline`.
+- **Category Pill:** Use `surface-container-low`, `on-surface-variant`, and `outline-variant`.
 
-### Lists & Ledger Rows
-- Minimal, edge-to-edge layout inside cards with 1px bottom divider `#EBECE8`.
-- Hover introduces an imperceptible slate tint (`#F7F8F6`).
+### Transaction Feed Rows
+- Minimal, edge-to-edge layout inside cards with a 1px bottom divider in `outline-variant`.
+- Hover uses `surface-container-low`.
 - Left region: Date block (`label-caps`) and title (`body-md` in bold charcoal).
-- Center region: Partner attribution avatar/initial capsule (20px circular badge).
-- Right region: Monetary value formatted in JetBrains Mono (`label-numeric`), followed by individual split breakdown below in `body-sm`.
+- Center region: Category pill and User Payer Badge (single payer).
+- Right region: Expense amount formatted in JetBrains Mono (`label-numeric`), followed by a delete action. Deletion requires confirmation; editing is out of scope for v1.
 
 ### Input Fields
-- Height 42px, 4px border radius, `#FFFFFF` fill, 1px border `#DCDED9`.
-- Typography: `body-md` for text; `label-numeric` when entering currency figures with a static prepended currency glyph in `#8C918E`.
-- Focus state: Border transitions to `#24332C` with no colored outer halo—strictly a crisp 1px high-contrast stroke.
+- Height 42px, 4px border radius, `surface-container-lowest` fill, 1px `outline-variant` border.
+- Typography: `body-md` for text; `label-numeric` when entering currency figures with a static prepended currency glyph in `outline`.
+- Focus state: Border transitions to `primary` with no colored outer halo—strictly a crisp 1px high-contrast stroke.
 
-### Checkboxes & Radio Controls
-- Square 16px boxes with 3px subtle corner radii for checkboxes; 16px circles for radios.
-- Unchecked: `#FFFFFF` fill, 1px border `#C8CDC6`.
-- Checked: `#24332C` solid fill with an ultra-fine white micro-checkmark or center dot.
+### Date Picker Field
+- Minimal input trigger showing selected expense date with calendar icon prefix.
+- Quick action pills adjacent to the picker: `[ Today ]` and `[ Yesterday ]` for instant single-tap selection.
 
 ### Cards
-- Surface: `#FFFFFF`, 8px border radius, 1px boundary `#E5E7E4`.
+- Surface: `surface-container-lowest`, 8px border radius, 1px `outline-variant` boundary.
 - Padding: 20px desktop, 16px mobile.
-- Section headers within cards utilize `label-caps` in `#6B706E` with generous 12px bottom spacing before content rows.
+- Section headers within cards utilize `label-caps` in `on-surface-variant` with generous 12px bottom spacing before content rows.
 
-### Dual Ledger Balance Meter (Specialty Component)
-- A streamlined horizontal equilibrium bar situated at the top of the shared ledger.
-- Displays the mutual balance status via a central anchor indicator flanked by Partner A and Partner B axes, using the muted sage accent to signify mutual debt resolution.
+### Consolidated vs. Individual Spending Ratio Bar
+- A streamlined horizontal proportion bar situated inside the hero spending card.
+- Displays the relative contribution percentage of total household spending incurred by User 1 (`payer-user-1`) versus User 2 (`payer-user-2`) for the selected month.

@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import com.dualexpense.dto.DashboardSummary;
 import com.dualexpense.dto.DashboardSummary.UserTopCategory;
 import com.dualexpense.dto.DashboardSummary.UserTotal;
+import com.dualexpense.exception.ExpenseNotFoundException;
 import com.dualexpense.model.Category;
 import com.dualexpense.model.Expense;
 import com.dualexpense.model.User;
@@ -110,7 +111,7 @@ public class ExpenseService {
     @Transactional
     public void deleteExpense(Long expenseId) {
         if (!expenseRepository.existsById(expenseId)) {
-            throw new IllegalArgumentException("Expense not found");
+            throw new ExpenseNotFoundException("Expense not found");
         }
         expenseRepository.deleteById(expenseId);
     }

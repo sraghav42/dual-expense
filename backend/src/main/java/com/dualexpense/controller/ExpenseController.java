@@ -3,6 +3,8 @@ package com.dualexpense.controller;
 import java.time.YearMonth;
 import java.util.List;
 
+import java.time.format.DateTimeParseException;
+
 import com.dualexpense.dto.CategoryResponse;
 import com.dualexpense.dto.DashboardSummary;
 import com.dualexpense.dto.ExpenseRequest;
@@ -40,16 +42,32 @@ public class ExpenseController {
 
     @GetMapping("/dashboard/summary")
     public DashboardSummary getDashboardSummary(@RequestParam String month) {
-        YearMonth ym = YearMonth.parse(month);
+        YearMonth ym = parseMonth(month);
         return expenseService.getSummaryForMonth(ym.getYear(), ym.getMonthValue());
     }
 
     @GetMapping("/expenses")
     public List<ExpenseResponse> listExpenses(@RequestParam String month) {
-        YearMonth ym = YearMonth.parse(month);
+        YearMonth ym = parseMonth(month);
         return expenseService.getExpensesForMonth(ym.getYear(), ym.getMonthValue()).stream()
             .map(ExpenseResponse::from)
             .toList();
+    }
+
+    private YearMonth parseMonth(String month) {
+        if (month == null || month.isBlank()) {
+            throw new IllegalArgumentException("Month must be in YYYY-MM format");
+        }
+
+        try {
+            YearMonth yearMonth = YearMonth.parse(month);
+            if (yearMonth.isAfter(YearMonth.now())) {
+                throw new IllegalArgumentException("Month cannot be in the future");
+            }
+            return yearMonth;
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Month must be in YYYY-MM format", ex);
+        }
     }
 
     @PostMapping("/expenses")

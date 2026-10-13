@@ -45,6 +45,7 @@ class ExpenseServiceTest {
 
         User userOne = userRepository.save(new User("User 1", "#6366F1"));
         User userTwo = userRepository.save(new User("User 2", "#14B8A6"));
+        userRepository.save(new User("User 3", "#F59E0B"));
         categoryRepository.saveAll(List.of(
             new Category("Groceries", "shopping-basket"),
             new Category("Housing/Rent", "house"),
@@ -102,8 +103,39 @@ class ExpenseServiceTest {
         DashboardSummary summary = expenseService.getSummaryForMonth(LocalDate.now().getYear(), LocalDate.now().getMonthValue());
 
         assertThat(summary.householdTotal()).isEqualByComparingTo("165.00");
-        assertThat(summary.userTotals()).hasSize(2);
+        assertThat(summary.userTotals()).hasSize(3);
         assertThat(summary.userTotals()).anyMatch(entry -> entry.userName().equals("User 1") && entry.total().compareTo(new BigDecimal("45.00")) == 0);
         assertThat(summary.userTotals()).anyMatch(entry -> entry.userName().equals("User 2") && entry.total().compareTo(new BigDecimal("120.00")) == 0);
+        assertThat(summary.userTotals()).anyMatch(entry -> entry.userName().equals("User 3") && entry.total().compareTo(BigDecimal.ZERO) == 0);
+    }
+
+    @Test
+    void summaryUsesSeededCategoryOrderWhenTopCategoriesTie() {
+        User user = userRepository.findByName("User 1").orElseThrow();
+        Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
+        Category rent = categoryRepository.findByName("Housing/Rent").orElseThrow();
+
+        expenseRepository.save(new Expense(BigDecimal.valueOf(50.00), LocalDate.now().minusDays(4), user, groceries, "Produce"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(50.00), LocalDate.now().minusDays(3), user, rent, "Rent-like"));
+
+        DashboardSummary summary = expenseService.getSummaryForMonth(LocalDate.now().getYear(), LocalDate.now().getMonthValue());
+
+        assertThat(summary.topCategories())
+            .filteredOn(entry -> entry.userId().equals(user.getId()))
+            .singleElement()
+            .satisfies(entry -> assertThat(entry.categoryName()).isEqualTo("Groceries"));
+    }
+
+    @Test
+    void summaryReturnsZeroAndNoTopCategoryForUsersWithNoExpenses() {
+        DashboardSummary summary = expenseService.getSummaryForMonth(LocalDate.now().getYear(), LocalDate.now().getMonthValue());
+
+        assertThat(summary.userTotals())
+            .filteredOn(entry -> entry.userName().equals("User 3"))
+            .singleElement()
+            .satisfies(entry -> {
+                assertThat(entry.total()).isZero();
+            });
+        assertThat(summary.topCategories()).noneMatch(entry -> entry.userName().equals("User 3"));
     }
 }

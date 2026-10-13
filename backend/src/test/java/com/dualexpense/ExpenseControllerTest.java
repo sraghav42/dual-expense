@@ -135,4 +135,15 @@ class ExpenseControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
     }
+
+    @Test
+    void rejectsMalformedAndFutureMonths() throws Exception {
+        mockMvc.perform(get("/api/v1/dashboard/summary")
+                .param("month", "2024/02"))
+            .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/expenses")
+                .param("month", YearMonth.now().plusMonths(1).toString()))
+            .andExpect(status().isBadRequest());
+    }
 }

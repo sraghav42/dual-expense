@@ -37,6 +37,27 @@ button, input, select {
   border-radius: 12px;
 }
 
+.month-navigation {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #c3c8c3;
+  background: #f3f4f3;
+  color: #1a1c1c;
+  cursor: pointer;
+}
+
+.nav-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   text-transform: uppercase;
@@ -89,6 +110,34 @@ button, input, select {
   font-size: 2rem;
   letter-spacing: -0.03em;
   font-weight: 500;
+}
+
+.user-card {
+  display: grid;
+  gap: 8px;
+}
+
+.user-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.category-pill.muted {
+  background: #f3f4f3;
+  color: #434845;
 }
 
 .summary-card small {
@@ -253,9 +302,99 @@ button, input, select {
   padding: 16px;
 }
 
+.expense-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.expense-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.expense-amount {
+  font-family: 'JetBrains Mono', 'SFMono-Regular', monospace;
+  font-weight: 600;
+}
+
 .expense-item p {
   margin: 6px 0 0;
   color: #434845;
+}
+
+.expense-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #434845;
+}
+
+.payer-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.expense-delete {
+  align-self: center;
+  border: none;
+  background: #0f1e18;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.empty-state {
+  border: 1px dashed #c3c8c3;
+  background: #f9f9f8;
+  border-radius: 12px;
+  padding: 20px;
+  color: #434845;
+  text-align: center;
+}
+
+@media (max-width: 1023px) {
+  .layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .page-shell {
+    padding: 16px 12px 40px;
+  }
+
+  .hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .month-navigation {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .expense-item {
+    flex-direction: column;
+  }
+
+  .expense-delete {
+    width: 100%;
+  }
 }
 
 .expense-meta {

@@ -48,8 +48,12 @@ export default function App() {
   const syncDefaultFormValues = (nextUsers: User[], nextCategories: Category[]) => {
     setForm((current) => ({
       ...current,
-      payerId: current.payerId || (nextUsers[0] ? String(nextUsers[0].id) : ''),
-      categoryId: current.categoryId || (nextCategories[0] ? String(nextCategories[0].id) : ''),
+      payerId: nextUsers.some((user) => String(user.id) === current.payerId)
+        ? current.payerId
+        : (nextUsers[0] ? String(nextUsers[0].id) : ''),
+      categoryId: nextCategories.some((category) => String(category.id) === current.categoryId)
+        ? current.categoryId
+        : (nextCategories[0] ? String(nextCategories[0].id) : ''),
       expenseDate: current.expenseDate || todayISO(),
     }));
   };
@@ -81,10 +85,22 @@ export default function App() {
     setSubmitError(null);
     setSuccessMessage(null);
 
+    const selectedUser = users.find((user) => String(user.id) === form.payerId);
+    if (!selectedUser) {
+      setSubmitError('Select a valid payer.');
+      return;
+    }
+
+    const selectedCategory = categories.find((category) => String(category.id) === form.categoryId);
+    if (!selectedCategory) {
+      setSubmitError('Select a valid category.');
+      return;
+    }
+
     const payload = {
       amount: form.amount,
-      payerId: Number(form.payerId),
-      categoryId: Number(form.categoryId),
+      payerId: selectedUser.id,
+      categoryId: selectedCategory.id,
       expenseDate: form.expenseDate,
       description: form.description,
     };

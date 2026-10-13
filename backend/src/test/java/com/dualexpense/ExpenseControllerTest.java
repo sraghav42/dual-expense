@@ -137,6 +137,13 @@ class ExpenseControllerTest {
     }
 
     @Test
+    void deleteExpenseReturnsNotFoundForUnknownExpense() throws Exception {
+        mockMvc.perform(delete("/api/v1/expenses/{id}", 999999L))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error").value("Expense not found"));
+    }
+
+    @Test
     void rejectsMalformedAndFutureMonths() throws Exception {
         mockMvc.perform(get("/api/v1/dashboard/summary")
                 .param("month", "2024/02"))

@@ -54,6 +54,7 @@ export default function App() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [form, setForm] = useState(() => createDefaultFormState());
   const [selectedMonth, setSelectedMonth] = useState(() => month());
 
@@ -143,8 +144,24 @@ export default function App() {
   };
 
   const handleDelete = async (expenseId: number) => {
-    await fetch(`/api/v1/expenses/${expenseId}`, { method: 'DELETE' });
-    await loadData(selectedMonth);
+    const confirmed = window.confirm('Delete this expense?');
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteError(null);
+
+    try {
+      const response = await fetch(`/api/v1/expenses/${expenseId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errorPayload.error ?? 'Unable to delete expense.');
+      }
+
+      await loadData(selectedMonth);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Unable to delete expense.');
+    }
   };
 
   const currentMonth = month();
@@ -277,6 +294,7 @@ export default function App() {
 
         <section className="panel">
           <h2>Expense feed</h2>
+          {deleteError && <p className="form-message error">{deleteError}</p>}
           {expenses.length === 0 ? (
             <div className="empty-state">No expenses for {monthToLabel(selectedMonth)}.</div>
           ) : (

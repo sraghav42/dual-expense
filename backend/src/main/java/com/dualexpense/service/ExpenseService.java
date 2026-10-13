@@ -2,10 +2,10 @@ package com.dualexpense.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.dualexpense.dto.DashboardSummary;
@@ -58,25 +58,44 @@ public class ExpenseService {
             .collect(Collectors.groupingBy(expense -> expense.getPayer().getId(),
                 Collectors.mapping(Expense::getAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
 
-        List<UserTotal> userSummary = userRepository.findAll().stream()
+        List<User> users = userRepository.findAll().stream()
+            .sorted(Comparator.comparing(User::getName))
+            .toList();
+        List<UserTotal> userSummary = users.stream()
             .map(user -> new UserTotal(user.getId(), user.getName(), userTotals.getOrDefault(user.getId(), BigDecimal.ZERO)))
-            .sorted(Comparator.comparing(UserTotal::userName))
             .toList();
 
-        List<UserTopCategory> topCategories = new ArrayList<>();
-        for (User user : userRepository.findAll()) {
-            Map<String, BigDecimal> categoryTotals = expenses.stream()
-                .filter(expense -> expense.getPayer().getId().equals(user.getId()))
-                .collect(Collectors.groupingBy(expense -> expense.getCategory().getName(),
-                    Collectors.mapping(Expense::getAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
-
-            if (!categoryTotals.isEmpty()) {
-                var top = categoryTotals.entrySet().stream()
-                    .max(Comparator.comparing(Map.Entry::getValue))
-                    .orElseThrow();
-                topCategories.add(new UserTopCategory(user.getId(), user.getName(), top.getKey(), top.getValue()));
-            }
+        List<Category> orderedCategories = categoryRepository.findAllByOrderByIdAsc();
+        Map<String, Integer> categoryOrder = new java.util.HashMap<>();
+        for (int index = 0; index < orderedCategories.size(); index++) {
+            categoryOrder.put(orderedCategories.get(index).getName(), index);
         }
+
+        List<UserTopCategory> topCategories = users.stream()
+            .map(user -> {
+                Map<String, BigDecimal> categoryTotals = expenses.stream()
+                    .filter(expense -> expense.getPayer().getId().equals(user.getId()))
+                    .collect(Collectors.groupingBy(expense -> expense.getCategory().getName(),
+                        Collectors.mapping(Expense::getAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
+
+                if (categoryTotals.isEmpty()) {
+                    return null;
+                }
+
+                Map.Entry<String, BigDecimal> top = categoryTotals.entrySet().stream()
+                    .max(Comparator
+                        .comparing((Map.Entry<String, BigDecimal> entry) -> entry.getValue())
+                        .thenComparing(entry -> -categoryOrder.getOrDefault(entry.getKey(), Integer.MAX_VALUE)))
+                    .orElse(null);
+
+                if (top == null) {
+                    return null;
+                }
+
+                return new UserTopCategory(user.getId(), user.getName(), top.getKey(), top.getValue());
+            })
+            .filter(Objects::nonNull)
+            .toList();
 
         return new DashboardSummary(householdTotal, userSummary, topCategories);
     }

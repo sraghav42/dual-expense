@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
 type User = { id: number; name: string; payerAccent: string };
 type Category = { id: number; name: string; iconIdentifier: string };
@@ -26,6 +26,19 @@ const dateOffsetISO = (days: number): string => {
   date.setDate(date.getDate() + days);
   return date.toISOString().slice(0, 10);
 };
+const monthKeyToDate = (value: string): Date => {
+  const [year, month] = value.split('-').map(Number);
+  return new Date(year, month - 1, 1);
+};
+const monthToLabel = (value: string): string =>
+  monthKeyToDate(value).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+const addMonth = (value: string, delta: number): string => {
+  const date = monthKeyToDate(value);
+  date.setMonth(date.getMonth() + delta);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+};
+const formatUsd = (value: number): string =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 const createDefaultFormState = (payerId?: number, categoryId?: number) => ({
   amount: '0',
   payerId: payerId ? String(payerId) : '',
@@ -42,8 +55,7 @@ export default function App() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [form, setForm] = useState(() => createDefaultFormState());
-
-  const selectedMonth = useMemo(() => month(), []);
+  const [selectedMonth, setSelectedMonth] = useState(() => month());
 
   const syncDefaultFormValues = (nextUsers: User[], nextCategories: Category[]) => {
     setForm((current) => ({
@@ -58,10 +70,10 @@ export default function App() {
     }));
   };
 
-  const loadData = async () => {
+  const loadData = async (monthValue: string) => {
     const [summaryRes, expenseRes, usersRes, categoriesRes] = await Promise.all([
-      fetch(`/api/v1/dashboard/summary?month=${selectedMonth}`),
-      fetch(`/api/v1/expenses?month=${selectedMonth}`),
+      fetch(`/api/v1/dashboard/summary?month=${monthValue}`),
+      fetch(`/api/v1/expenses?month=${monthValue}`),
       fetch('/api/v1/users'),
       fetch('/api/v1/categories'),
     ]);
@@ -77,7 +89,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    void loadData();
+    void loadData(selectedMonth);
   }, [selectedMonth]);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -127,32 +139,67 @@ export default function App() {
       expenseDate: todayISO(),
     });
     setSuccessMessage('Expense saved.');
-    await loadData();
+    await loadData(selectedMonth);
   };
 
   const handleDelete = async (expenseId: number) => {
     await fetch(`/api/v1/expenses/${expenseId}`, { method: 'DELETE' });
-    await loadData();
+    await loadData(selectedMonth);
   };
+
+  const currentMonth = month();
+  const isCurrentMonth = selectedMonth === currentMonth;
+  const householdTotal = summary?.householdTotal ?? 0;
 
   return (
     <main className="page-shell">
       <header className="hero">
         <div>
           <p className="eyebrow">Household spend</p>
-          <h1>{summary ? `$${summary.householdTotal.toFixed(2)}` : '$0.00'}</h1>
+          <h1>{formatUsd(householdTotal)}</h1>
         </div>
-        <div className="month-chip">{selectedMonth}</div>
+        <div className="month-navigation" aria-label="Month navigation">
+          <button type="button" className="nav-button" onClick={() => setSelectedMonth((current) => addMonth(current, -1))} aria-label="Previous month">
+            ←
+          </button>
+          <div className="month-chip">{monthToLabel(selectedMonth)}</div>
+          <button
+            type="button"
+            className="nav-button"
+            onClick={() => setSelectedMonth((current) => addMonth(current, 1))}
+            disabled={isCurrentMonth}
+            aria-label="Next month"
+          >
+            →
+          </button>
+        </div>
       </header>
 
       <section className="summary-grid">
-        {summary?.userTotals.map((entry) => (
-          <article key={entry.userId} className="summary-card">
-            <span className="label">{entry.userName}</span>
-            <strong>${entry.total.toFixed(2)}</strong>
-            <small>{summary.topCategories.find((x) => x.userId === entry.userId)?.categoryName ?? '—'}</small>
-          </article>
-        ))}
+        {summary?.userTotals.map((entry) => {
+          const userAccent = users.find((user) => user.id === entry.userId)?.payerAccent ?? '#0f1e18';
+          const topCategory = summary.topCategories.find((item) => item.userId === entry.userId);
+          const share = householdTotal > 0 ? (entry.total / householdTotal) * 100 : 0;
+
+          return (
+            <article key={entry.userId} className="summary-card user-card" style={{ borderColor: userAccent }}>
+              <div className="user-card-header">
+                <span className="label" style={{ color: userAccent }}>{entry.userName}</span>
+                {topCategory ? (
+                  <span className="category-pill" style={{ background: `${userAccent}1F`, color: userAccent }}>
+                    {topCategory.categoryName}
+                  </span>
+                ) : (
+                  <span className="category-pill muted">No spending</span>
+                )}
+              </div>
+              <strong>{formatUsd(entry.total)}</strong>
+              <small>
+                {topCategory ? `${share.toFixed(0)}% of household spend` : 'No expenses recorded'}
+              </small>
+            </article>
+          );
+        })}
       </section>
 
       <div className="layout-grid">
@@ -229,23 +276,33 @@ export default function App() {
         </section>
 
         <section className="panel">
-          <h2>Expenses</h2>
-          <ul className="expense-list">
-            {expenses.map((expense) => (
-              <li key={expense.id} className="expense-item">
-                <div>
-                  <strong>{expense.categoryName}</strong>
-                  <p>{expense.description || 'No description'}</p>
-                </div>
-                <div className="expense-meta">
-                  <span>{expense.expenseDate}</span>
-                  <span>{expense.payerName}</span>
-                  <strong>${expense.amount.toFixed(2)}</strong>
-                  <button type="button" onClick={() => void handleDelete(expense.id)}>Delete</button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <h2>Expense feed</h2>
+          {expenses.length === 0 ? (
+            <div className="empty-state">No expenses for {monthToLabel(selectedMonth)}.</div>
+          ) : (
+            <ul className="expense-list">
+              {expenses.map((expense) => (
+                <li key={expense.id} className="expense-item">
+                  <div className="expense-info">
+                    <div className="expense-title-row">
+                      <strong>{expense.categoryName}</strong>
+                      <span className="expense-amount">{formatUsd(expense.amount)}</span>
+                    </div>
+                    <p>{expense.description || 'No description'}</p>
+                    <div className="expense-meta">
+                      <span>{expense.expenseDate}</span>
+                      <span className="payer-badge" style={{ background: users.find((user) => user.id === expense.payerId)?.payerAccent ?? '#0f1e18', color: '#ffffff' }}>
+                        {expense.payerName}
+                      </span>
+                    </div>
+                  </div>
+                  <button type="button" className="expense-delete" onClick={() => void handleDelete(expense.id)}>
+                    Delete
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </main>

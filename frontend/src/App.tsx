@@ -19,21 +19,44 @@ type DashboardSummary = {
 };
 
 const month = (): string => new Date().toISOString().slice(0, 7);
+const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const dateOffsetISO = (days: number): string => {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+const createDefaultFormState = (payerId?: number, categoryId?: number) => ({
+  amount: '0',
+  payerId: payerId ? String(payerId) : '',
+  categoryId: categoryId ? String(categoryId) : '',
+  description: '',
+  expenseDate: todayISO(),
+});
 
 export default function App() {
   const [users, setUsers] = useState<User[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [form, setForm] = useState({
-    amount: '0',
-    payerId: '',
-    categoryId: '',
-    description: '',
-    expenseDate: new Date().toISOString().slice(0, 10),
-  });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [form, setForm] = useState(() => createDefaultFormState());
 
   const selectedMonth = useMemo(() => month(), []);
+
+  const syncDefaultFormValues = (nextUsers: User[], nextCategories: Category[]) => {
+    setForm((current) => ({
+      ...current,
+      payerId: nextUsers.some((user) => String(user.id) === current.payerId)
+        ? current.payerId
+        : (nextUsers[0] ? String(nextUsers[0].id) : ''),
+      categoryId: nextCategories.some((category) => String(category.id) === current.categoryId)
+        ? current.categoryId
+        : (nextCategories[0] ? String(nextCategories[0].id) : ''),
+      expenseDate: current.expenseDate || todayISO(),
+    }));
+  };
 
   const loadData = async () => {
     const [summaryRes, expenseRes, usersRes, categoriesRes] = await Promise.all([
@@ -43,17 +66,14 @@ export default function App() {
       fetch('/api/v1/categories'),
     ]);
 
+    const nextUsers = usersRes.ok ? ((await usersRes.json()) as User[]) : users;
+    const nextCategories = categoriesRes.ok ? ((await categoriesRes.json()) as Category[]) : categories;
+
     if (summaryRes.ok) setSummary(await summaryRes.json());
     if (expenseRes.ok) setExpenses(await expenseRes.json());
-    if (usersRes.ok) setUsers(await usersRes.json());
-    if (categoriesRes.ok) setCategories(await categoriesRes.json());
-
-    if (!form.payerId && users.length > 0) {
-      setForm((current) => ({ ...current, payerId: String(users[0].id) }));
-    }
-    if (!form.categoryId && categories.length > 0) {
-      setForm((current) => ({ ...current, categoryId: String(categories[0].id) }));
-    }
+    setUsers(nextUsers);
+    setCategories(nextCategories);
+    syncDefaultFormValues(nextUsers, nextCategories);
   };
 
   useEffect(() => {
@@ -62,10 +82,25 @@ export default function App() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setSubmitError(null);
+    setSuccessMessage(null);
+
+    const selectedUser = users.find((user) => String(user.id) === form.payerId);
+    if (!selectedUser) {
+      setSubmitError('Select a valid payer.');
+      return;
+    }
+
+    const selectedCategory = categories.find((category) => String(category.id) === form.categoryId);
+    if (!selectedCategory) {
+      setSubmitError('Select a valid category.');
+      return;
+    }
+
     const payload = {
       amount: form.amount,
-      payerId: Number(form.payerId),
-      categoryId: Number(form.categoryId),
+      payerId: selectedUser.id,
+      categoryId: selectedCategory.id,
       expenseDate: form.expenseDate,
       description: form.description,
     };
@@ -76,10 +111,23 @@ export default function App() {
       body: JSON.stringify(payload),
     });
 
-    if (response.ok) {
-      setForm((current) => ({ ...current, amount: '0', description: '' }));
-      await loadData();
+    if (!response.ok) {
+      const errorPayload = (await response.json().catch(() => ({}))) as { error?: string };
+      setSubmitError(errorPayload.error ?? 'Unable to save expense.');
+      return;
     }
+
+    const defaultPayerId = users[0] ? users[0].id : Number(form.payerId) || undefined;
+    const defaultCategoryId = categories[0] ? categories[0].id : Number(form.categoryId) || undefined;
+
+    setForm({
+      ...createDefaultFormState(defaultPayerId, defaultCategoryId),
+      amount: '0',
+      description: '',
+      expenseDate: todayISO(),
+    });
+    setSuccessMessage('Expense saved.');
+    await loadData();
   };
 
   const handleDelete = async (expenseId: number) => {
@@ -110,36 +158,73 @@ export default function App() {
       <div className="layout-grid">
         <section className="panel">
           <h2>Add expense</h2>
+          {submitError && <p className="form-message error">{submitError}</p>}
+          {successMessage && <p className="form-message success">{successMessage}</p>}
           <form className="expense-form" onSubmit={handleSubmit}>
-            <label>
-              Amount
-              <input type="number" step="0.01" min="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+            <label className="field">
+              <span>USD amount</span>
+              <div className="amount-row">
+                <span className="currency">$</span>
+                <input type="number" step="0.01" min="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
+              </div>
             </label>
-            <label>
-              Date
-              <input type="date" value={form.expenseDate} onChange={(e) => setForm({ ...form, expenseDate: e.target.value })} />
-            </label>
-            <label>
-              Payer
-              <select value={form.payerId} onChange={(e) => setForm({ ...form, payerId: e.target.value })}>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>{user.name}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Category
-              <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
+
+            <div className="field">
+              <span>Payer</span>
+              <div className="payer-toggle" role="tablist" aria-label="Select payer">
+                {users.map((user) => {
+                  const isSelected = form.payerId === String(user.id);
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      className={isSelected ? 'is-active' : ''}
+                      style={{
+                        background: isSelected ? user.payerAccent : '#f3f4f3',
+                        color: isSelected ? '#ffffff' : '#1a1c1c',
+                        borderColor: isSelected ? user.payerAccent : '#c3c8c3',
+                      }}
+                      onClick={() => setForm({ ...form, payerId: String(user.id) })}
+                    >
+                      {user.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="field">
+              <span>Category</span>
+              <div className="category-grid">
                 {categories.map((category) => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
+                  <button
+                    key={category.id}
+                    type="button"
+                    className={form.categoryId === String(category.id) ? 'category-button active' : 'category-button'}
+                    onClick={() => setForm({ ...form, categoryId: String(category.id) })}
+                  >
+                    <span>{category.iconIdentifier}</span>
+                    <span>{category.name}</span>
+                  </button>
                 ))}
-              </select>
+              </div>
+            </div>
+
+            <div className="field">
+              <span>Date</span>
+              <div className="date-actions">
+                <input type="date" value={form.expenseDate} onChange={(e) => setForm({ ...form, expenseDate: e.target.value })} />
+                <button type="button" className="inline-button" onClick={() => setForm({ ...form, expenseDate: todayISO() })}>Today</button>
+                <button type="button" className="inline-button" onClick={() => setForm({ ...form, expenseDate: dateOffsetISO(-1) })}>Yesterday</button>
+              </div>
+            </div>
+
+            <label className="field">
+              <span>Description</span>
+              <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={255} placeholder="Optional note" />
             </label>
-            <label>
-              Description
-              <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={255} />
-            </label>
-            <button type="submit">Save Expense</button>
+
+            <button type="submit" className="primary-button">Save Expense</button>
           </form>
         </section>
 

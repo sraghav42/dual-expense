@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type User = { id: number; name: string; payerAccent: string };
-type Category = { id: number; name: string };
+type Category = { id: number; name: string; iconIdentifier: string };
 type Expense = {
   id: number;
   amount: number;

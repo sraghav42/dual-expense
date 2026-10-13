@@ -7,10 +7,18 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import com.dualexpense.dto.DashboardSummary;
+import com.dualexpense.model.Category;
+import com.dualexpense.model.Expense;
+import com.dualexpense.model.User;
+import com.dualexpense.repository.CategoryRepository;
+import com.dualexpense.repository.ExpenseRepository;
+import com.dualexpense.repository.UserRepository;
+import com.dualexpense.service.ExpenseService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 @DataJpaTest
@@ -38,14 +46,14 @@ class ExpenseServiceTest {
         User userOne = userRepository.save(new User("User 1", "#6366F1"));
         User userTwo = userRepository.save(new User("User 2", "#14B8A6"));
         categoryRepository.saveAll(List.of(
-            new Category("Groceries"),
-            new Category("Housing/Rent"),
-            new Category("Utilities"),
-            new Category("Dining"),
-            new Category("Transport"),
-            new Category("Entertainment"),
-            new Category("Subscriptions"),
-            new Category("Other")
+            new Category("Groceries", "shopping-basket"),
+            new Category("Housing/Rent", "house"),
+            new Category("Utilities", "zap"),
+            new Category("Dining", "utensils"),
+            new Category("Transport", "car"),
+            new Category("Entertainment", "popcorn"),
+            new Category("Subscriptions", "repeat"),
+            new Category("Other", "ellipsis")
         ));
 
         expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), LocalDate.now().minusDays(2), userOne, categoryRepository.findByName("Groceries").orElseThrow(), "Milk and eggs"));

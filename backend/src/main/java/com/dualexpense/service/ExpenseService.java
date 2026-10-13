@@ -1,4 +1,4 @@
-package com.dualexpense;
+package com.dualexpense.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -8,6 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.dualexpense.dto.DashboardSummary;
+import com.dualexpense.dto.DashboardSummary.UserTopCategory;
+import com.dualexpense.dto.DashboardSummary.UserTotal;
+import com.dualexpense.model.Category;
+import com.dualexpense.model.Expense;
+import com.dualexpense.model.User;
+import com.dualexpense.repository.CategoryRepository;
+import com.dualexpense.repository.ExpenseRepository;
+import com.dualexpense.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

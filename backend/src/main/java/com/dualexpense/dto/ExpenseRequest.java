@@ -1,4 +1,4 @@
-package com.dualexpense;
+package com.dualexpense.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

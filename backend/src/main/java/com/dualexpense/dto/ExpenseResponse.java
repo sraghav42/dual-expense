@@ -1,7 +1,9 @@
-package com.dualexpense;
+package com.dualexpense.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+
+import com.dualexpense.model.Expense;
 
 public record ExpenseResponse(
     Long id,

@@ -11,11 +11,18 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
+import com.dualexpense.dto.ExpenseResponse;
+import com.dualexpense.model.Category;
+import com.dualexpense.model.Expense;
+import com.dualexpense.model.User;
+import com.dualexpense.repository.CategoryRepository;
+import com.dualexpense.repository.ExpenseRepository;
+import com.dualexpense.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -47,15 +54,29 @@ class ExpenseControllerTest {
         ));
 
         categoryRepository.saveAll(List.of(
-            new Category("Groceries"),
-            new Category("Housing/Rent"),
-            new Category("Utilities"),
-            new Category("Dining"),
-            new Category("Transport"),
-            new Category("Entertainment"),
-            new Category("Subscriptions"),
-            new Category("Other")
+            new Category("Groceries", "shopping-basket"),
+            new Category("Housing/Rent", "house"),
+            new Category("Utilities", "zap"),
+            new Category("Dining", "utensils"),
+            new Category("Transport", "car"),
+            new Category("Entertainment", "popcorn"),
+            new Category("Subscriptions", "repeat"),
+            new Category("Other", "ellipsis")
         ));
+    }
+
+    @Test
+    void readinessReportsDatabaseAvailability() throws Exception {
+        mockMvc.perform(get("/actuator/health/readiness"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    void categoriesIncludeTheirIconIdentifiers() throws Exception {
+        mockMvc.perform(get("/api/v1/categories"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.name == 'Groceries')].iconIdentifier").value(org.hamcrest.Matchers.hasItem("shopping-basket")));
     }
 
     @Test

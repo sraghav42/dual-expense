@@ -1,4 +1,6 @@
-package com.dualexpense;
+package com.dualexpense.dto;
+
+import com.dualexpense.model.User;
 
 public record UserResponse(Long id, String name, String payerAccent) {
     public static UserResponse from(User user) {

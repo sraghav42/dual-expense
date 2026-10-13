@@ -1,4 +1,4 @@
-package com.dualexpense;
+package com.dualexpense.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,8 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "categories")
+public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -17,15 +17,15 @@ public class User {
     @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(name = "payer_accent", nullable = false)
-    private String payerAccent;
+    @Column(name = "icon_identifier", nullable = false, length = 50)
+    private String iconIdentifier;
 
-    protected User() {
+    protected Category() {
     }
 
-    public User(String name, String payerAccent) {
+    public Category(String name, String iconIdentifier) {
         this.name = name;
-        this.payerAccent = payerAccent;
+        this.iconIdentifier = iconIdentifier;
     }
 
     public Long getId() {
@@ -36,7 +36,7 @@ public class User {
         return name;
     }
 
-    public String getPayerAccent() {
-        return payerAccent;
+    public String getIconIdentifier() {
+        return iconIdentifier;
     }
 }

@@ -1,8 +1,17 @@
-package com.dualexpense;
+package com.dualexpense.controller;
 
 import java.time.YearMonth;
 import java.util.List;
 
+import com.dualexpense.dto.CategoryResponse;
+import com.dualexpense.dto.DashboardSummary;
+import com.dualexpense.dto.ExpenseRequest;
+import com.dualexpense.dto.ExpenseResponse;
+import com.dualexpense.dto.UserResponse;
+import com.dualexpense.model.Expense;
+import com.dualexpense.repository.CategoryRepository;
+import com.dualexpense.repository.UserRepository;
+import com.dualexpense.service.ExpenseService;
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package com.dualexpense;
+package com.dualexpense.exception;
 
 import java.util.Map;
 

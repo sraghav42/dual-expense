@@ -83,6 +83,21 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void createExpenseRejectsFutureDatesAndLongDescriptions() {
+        User user = userRepository.findByName("User 1").orElseThrow();
+        Category category = categoryRepository.findByName("Groceries").orElseThrow();
+        String longDescription = "x".repeat(256);
+
+        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.valueOf(42.00), LocalDate.now().plusDays(1), user.getId(), category.getId(), "Soon"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("today or earlier");
+
+        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.valueOf(42.00), LocalDate.now(), user.getId(), category.getId(), longDescription))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("255 characters or fewer");
+    }
+
+    @Test
     void summaryReturnsMonthlyTotals() {
         DashboardSummary summary = expenseService.getSummaryForMonth(LocalDate.now().getYear(), LocalDate.now().getMonthValue());
 

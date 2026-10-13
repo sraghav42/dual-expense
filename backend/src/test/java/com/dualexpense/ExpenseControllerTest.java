@@ -1,5 +1,6 @@
 package com.dualexpense;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,14 +21,18 @@ import com.dualexpense.repository.ExpenseRepository;
 import com.dualexpense.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ExtendWith(OutputCaptureExtension.class)
 class ExpenseControllerTest {
 
     @Autowired
@@ -101,6 +106,29 @@ class ExpenseControllerTest {
                 .param("month", YearMonth.now().toString()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].description").value("Bakery"));
+    }
+
+    @Test
+    void logsApiRequestMetadataWithoutLoggingExpenseDetails(CapturedOutput output) throws Exception {
+        User user = userRepository.findByName("User 1").orElseThrow();
+        Category category = categoryRepository.findByName("Groceries").orElseThrow();
+        String privateDescription = "private expense description";
+
+        mockMvc.perform(post("/api/v1/expenses")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{" +
+                        "\"amount\":\"87.25\"," +
+                        "\"expenseDate\":\"%s\"," +
+                        "\"payerId\":%d," +
+                        "\"categoryId\":%d," +
+                        "\"description\":\"%s\"" +
+                        "}", LocalDate.now().minusDays(1), user.getId(), category.getId(), privateDescription)))
+            .andExpect(status().isCreated());
+
+        assertThat(output.getAll())
+            .contains("API request method=POST path=/api/v1/expenses status=201 durationMs=")
+            .contains("Created expense id=")
+            .doesNotContain(privateDescription);
     }
 
     @Test

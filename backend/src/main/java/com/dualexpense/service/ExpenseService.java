@@ -18,11 +18,15 @@ import com.dualexpense.model.User;
 import com.dualexpense.repository.CategoryRepository;
 import com.dualexpense.repository.ExpenseRepository;
 import com.dualexpense.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ExpenseService {
+    private static final Logger logger = LoggerFactory.getLogger(ExpenseService.class);
+
     private final ExpenseRepository expenseRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
@@ -42,7 +46,9 @@ public class ExpenseService {
         Category category = categoryRepository.findById(categoryId)
             .orElseThrow(() -> new IllegalArgumentException("Invalid category"));
 
-        return expenseRepository.save(new Expense(amount, expenseDate, payer, category, description));
+        Expense created = expenseRepository.save(new Expense(amount, expenseDate, payer, category, description));
+        logger.info("Created expense id={}", created.getId());
+        return created;
     }
 
     @Transactional(readOnly = true)
@@ -114,6 +120,7 @@ public class ExpenseService {
             throw new ExpenseNotFoundException("Expense not found");
         }
         expenseRepository.deleteById(expenseId);
+        logger.info("Deleted expense id={}", expenseId);
     }
 
     private void validateExpense(BigDecimal amount, LocalDate expenseDate, Long payerId, Long categoryId, String description) {

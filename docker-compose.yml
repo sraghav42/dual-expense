@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dual-expense-postgres
+    environment:
+      POSTGRES_DB: dualexpense
+      POSTGRES_USER: dualexpense
+      POSTGRES_PASSWORD: dualexpense
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

@@ -34,6 +34,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ExtendWith(OutputCaptureExtension.class)
 class ExpenseControllerTest {
+    private static final String FIRST_USER_NAME = "Test User One";
+    private static final String SECOND_USER_NAME = "Test User Two";
 
     @Autowired
     private MockMvc mockMvc;
@@ -51,12 +53,6 @@ class ExpenseControllerTest {
     void setUp() {
         expenseRepository.deleteAll();
         categoryRepository.deleteAll();
-        userRepository.deleteAll();
-
-        userRepository.saveAll(List.of(
-            new User("User 1", "#6366F1"),
-            new User("User 2", "#14B8A6")
-        ));
 
         categoryRepository.saveAll(List.of(
             new Category("Groceries", "shopping-basket"),
@@ -85,8 +81,16 @@ class ExpenseControllerTest {
     }
 
     @Test
+    void usersExposeNamesConfiguredAtStartup() throws Exception {
+        mockMvc.perform(get("/api/v1/users"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].name").value(FIRST_USER_NAME))
+            .andExpect(jsonPath("$[1].name").value(SECOND_USER_NAME));
+    }
+
+    @Test
     void createExpenseAndListByMonth() throws Exception {
-        User user = userRepository.findByName("User 1").orElseThrow();
+        User user = userRepository.findByName(FIRST_USER_NAME).orElseThrow();
         Category category = categoryRepository.findByName("Groceries").orElseThrow();
 
         mockMvc.perform(post("/api/v1/expenses")
@@ -100,7 +104,7 @@ class ExpenseControllerTest {
                         "}", LocalDate.now().minusDays(1), user.getId(), category.getId())))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.amount").value(87.25))
-            .andExpect(jsonPath("$.payerName").value("User 1"));
+            .andExpect(jsonPath("$.payerName").value(FIRST_USER_NAME));
 
         mockMvc.perform(get("/api/v1/expenses")
                 .param("month", YearMonth.now().toString()))
@@ -110,7 +114,7 @@ class ExpenseControllerTest {
 
     @Test
     void logsApiRequestMetadataWithoutLoggingExpenseDetails(CapturedOutput output) throws Exception {
-        User user = userRepository.findByName("User 1").orElseThrow();
+        User user = userRepository.findByName(FIRST_USER_NAME).orElseThrow();
         Category category = categoryRepository.findByName("Groceries").orElseThrow();
         String privateDescription = "private expense description";
 
@@ -133,8 +137,8 @@ class ExpenseControllerTest {
 
     @Test
     void summaryReturnsHouseholdTotals() throws Exception {
-        User userOne = userRepository.findByName("User 1").orElseThrow();
-        User userTwo = userRepository.findByName("User 2").orElseThrow();
+        User userOne = userRepository.findByName(FIRST_USER_NAME).orElseThrow();
+        User userTwo = userRepository.findByName(SECOND_USER_NAME).orElseThrow();
         Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
         Category rent = categoryRepository.findByName("Housing/Rent").orElseThrow();
 
@@ -145,13 +149,13 @@ class ExpenseControllerTest {
                 .param("month", YearMonth.now().toString()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.householdTotal").value(165.00))
-            .andExpect(jsonPath("$.userTotals[0].userName").value("User 1"))
-            .andExpect(jsonPath("$.userTotals[1].userName").value("User 2"));
+                .andExpect(jsonPath("$.userTotals[0].userName").value(FIRST_USER_NAME))
+                .andExpect(jsonPath("$.userTotals[1].userName").value(SECOND_USER_NAME));
     }
 
     @Test
     void deleteExpenseRemovesExpense() throws Exception {
-        User user = userRepository.findByName("User 1").orElseThrow();
+        User user = userRepository.findByName(FIRST_USER_NAME).orElseThrow();
         Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
         Expense saved = expenseRepository.save(new Expense(BigDecimal.valueOf(25.00), LocalDate.now().minusDays(3), user, groceries, "Bread"));
 

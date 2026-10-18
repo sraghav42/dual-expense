@@ -1,0 +1,39 @@
+name: Deploy to AWS Lightsail
+
+on:
+  push:
+    branches:
+      - master  # Triggers deployment whenever code is pushed to master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Execute remote SSH commands to deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USERNAME }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script: |
+            # Navigate to project directory
+            cd dual-expense/
+            
+            # Pull latest changes from Git
+            git pull origin master
+            
+            # Stop existing containers to free up RAM/CPU for building
+            docker compose -f docker-compose.prod.yml stop
+            
+            # Rebuild images while memory and CPU are free
+            docker compose -f docker-compose.prod.yml build
+            
+            # Start updated containers in detached mode
+            docker compose -f docker-compose.prod.yml up -d
+            
+            # Clean up dangling images to keep Lightsail disk space free
+            docker image prune -f

@@ -190,10 +190,8 @@ export default function App() {
     });
     setSuccessMessage('Expense added successfully to ledger.');
     await loadData(selectedMonth);
-    setTimeout(() => {
-      setIsAddModalOpen(false);
-      setSuccessMessage(null);
-    }, 800);
+    document.getElementById('expense-amount-input')?.focus();
+    setTimeout(() => setSuccessMessage(null), 2500);
   };
 
   const handleDelete = async (expenseId: number) => {

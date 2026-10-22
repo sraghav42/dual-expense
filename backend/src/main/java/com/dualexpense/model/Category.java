@@ -26,11 +26,6 @@ public class Category {
     protected Category() {
     }
 
-    public Category(String name, String iconIdentifier) {
-        this.name = name;
-        this.iconIdentifier = iconIdentifier;
-    }
-
     public Category(String name, String iconIdentifier, Integer displayOrder) {
         this.name = name;
         this.iconIdentifier = iconIdentifier;

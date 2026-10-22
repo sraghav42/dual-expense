@@ -47,7 +47,8 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   'utensils': 'restaurant',
   'car': 'directions_car',
   'popcorn': 'theater_comedy',
-  'repeat': 'sync',
+  'spa': 'spa',
+  'checkroom': 'checkroom',
   'ellipsis': 'more_horiz',
 };
 

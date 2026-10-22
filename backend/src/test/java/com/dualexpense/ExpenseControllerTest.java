@@ -55,14 +55,15 @@ class ExpenseControllerTest {
         categoryRepository.deleteAll();
 
         categoryRepository.saveAll(List.of(
-            new Category("Groceries", "shopping-basket"),
-            new Category("Housing/Rent", "house"),
-            new Category("Utilities", "zap"),
-            new Category("Dining", "utensils"),
-            new Category("Transport", "car"),
-            new Category("Entertainment", "popcorn"),
-            new Category("Subscriptions", "repeat"),
-            new Category("Other", "ellipsis")
+            new Category("Groceries", "shopping-basket", 1),
+            new Category("Housing/Rent", "house", 2),
+            new Category("Utilities", "zap", 3),
+            new Category("Dining", "utensils", 4),
+            new Category("Transport", "car", 5),
+            new Category("Entertainment", "popcorn", 6),
+            new Category("Health/Beauty", "spa", 7),
+            new Category("Clothing", "checkroom", 8),
+            new Category("Other", "ellipsis", 9)
         ));
     }
 
@@ -78,6 +79,22 @@ class ExpenseControllerTest {
         mockMvc.perform(get("/api/v1/categories"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[?(@.name == 'Groceries')].iconIdentifier").value(org.hamcrest.Matchers.hasItem("shopping-basket")));
+    }
+
+    @Test
+    void categoriesAreReturnedInDisplayOrderWithOtherLast() throws Exception {
+        mockMvc.perform(get("/api/v1/categories"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(9))
+            .andExpect(jsonPath("$[0].name").value("Groceries"))
+            .andExpect(jsonPath("$[1].name").value("Housing/Rent"))
+            .andExpect(jsonPath("$[2].name").value("Utilities"))
+            .andExpect(jsonPath("$[3].name").value("Dining"))
+            .andExpect(jsonPath("$[4].name").value("Transport"))
+            .andExpect(jsonPath("$[5].name").value("Entertainment"))
+            .andExpect(jsonPath("$[6].name").value("Health/Beauty"))
+            .andExpect(jsonPath("$[7].name").value("Clothing"))
+            .andExpect(jsonPath("$[8].name").value("Other"));
     }
 
     @Test

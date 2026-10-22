@@ -47,14 +47,15 @@ class ExpenseServiceTest {
         User userTwo = userRepository.save(new User("User 2", "#14B8A6"));
         userRepository.save(new User("User 3", "#F59E0B"));
         categoryRepository.saveAll(List.of(
-            new Category("Groceries", "shopping-basket"),
-            new Category("Housing/Rent", "house"),
-            new Category("Utilities", "zap"),
-            new Category("Dining", "utensils"),
-            new Category("Transport", "car"),
-            new Category("Entertainment", "popcorn"),
-            new Category("Subscriptions", "repeat"),
-            new Category("Other", "ellipsis")
+            new Category("Groceries", "shopping-basket", 1),
+            new Category("Housing/Rent", "house", 2),
+            new Category("Utilities", "zap", 3),
+            new Category("Dining", "utensils", 4),
+            new Category("Transport", "car", 5),
+            new Category("Entertainment", "popcorn", 6),
+            new Category("Health/Beauty", "spa", 7),
+            new Category("Clothing", "checkroom", 8),
+            new Category("Other", "ellipsis", 9)
         ));
 
         expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), LocalDate.now().minusDays(2), userOne, categoryRepository.findByName("Groceries").orElseThrow(), "Milk and eggs"));

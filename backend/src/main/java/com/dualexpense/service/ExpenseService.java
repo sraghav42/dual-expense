@@ -72,7 +72,7 @@ public class ExpenseService {
             .map(user -> new UserTotal(user.getId(), user.getName(), userTotals.getOrDefault(user.getId(), BigDecimal.ZERO)))
             .toList();
 
-        List<Category> orderedCategories = categoryRepository.findAllByOrderByIdAsc();
+        List<Category> orderedCategories = categoryRepository.findAllByOrderByDisplayOrderAscIdAsc();
         Map<String, Integer> categoryOrder = new java.util.HashMap<>();
         for (int index = 0; index < orderedCategories.size(); index++) {
             categoryOrder.put(orderedCategories.get(index).getName(), index);

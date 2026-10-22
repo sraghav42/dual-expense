@@ -20,12 +20,21 @@ public class Category {
     @Column(name = "icon_identifier", nullable = false, length = 50)
     private String iconIdentifier;
 
+    @Column(name = "display_order", nullable = false)
+    private Integer displayOrder;
+
     protected Category() {
     }
 
     public Category(String name, String iconIdentifier) {
         this.name = name;
         this.iconIdentifier = iconIdentifier;
+    }
+
+    public Category(String name, String iconIdentifier, Integer displayOrder) {
+        this.name = name;
+        this.iconIdentifier = iconIdentifier;
+        this.displayOrder = displayOrder;
     }
 
     public Long getId() {
@@ -38,5 +47,9 @@ public class Category {
 
     public String getIconIdentifier() {
         return iconIdentifier;
+    }
+
+    public Integer getDisplayOrder() {
+        return displayOrder;
     }
 }

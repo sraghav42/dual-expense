@@ -90,7 +90,7 @@ public class ExpenseController {
 
     @GetMapping("/categories")
     public List<CategoryResponse> listCategories() {
-        return categoryRepository.findAll().stream().map(CategoryResponse::from).toList();
+        return categoryRepository.findAllByOrderByDisplayOrderAscIdAsc().stream().map(CategoryResponse::from).toList();
     }
 
     @GetMapping("/users")

@@ -1,5 +1,6 @@
 package com.dualexpense.controller;
 
+import java.time.Clock;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -33,11 +34,13 @@ public class ExpenseController {
     private final ExpenseService expenseService;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final Clock clock;
 
-    public ExpenseController(ExpenseService expenseService, UserRepository userRepository, CategoryRepository categoryRepository) {
+    public ExpenseController(ExpenseService expenseService, UserRepository userRepository, CategoryRepository categoryRepository, Clock clock) {
         this.expenseService = expenseService;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
+        this.clock = clock;
     }
 
     @GetMapping("/dashboard/summary")
@@ -61,7 +64,7 @@ public class ExpenseController {
 
         try {
             YearMonth yearMonth = YearMonth.parse(month);
-            if (yearMonth.isAfter(YearMonth.now())) {
+            if (yearMonth.isAfter(YearMonth.now(clock))) {
                 throw new IllegalArgumentException("Month cannot be in the future");
             }
             return yearMonth;
@@ -90,7 +93,7 @@ public class ExpenseController {
 
     @GetMapping("/categories")
     public List<CategoryResponse> listCategories() {
-        return categoryRepository.findAll().stream().map(CategoryResponse::from).toList();
+        return categoryRepository.findAllByOrderByDisplayOrderAscIdAsc().stream().map(CategoryResponse::from).toList();
     }
 
     @GetMapping("/users")

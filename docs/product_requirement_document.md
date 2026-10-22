@@ -30,7 +30,7 @@ Dual Expense is a lightweight expense logger for a two-person household. It reco
 - Seed exactly two fixed profiles named **User 1** and **User 2**.
 - User 1 uses the indigo payer accent `#6366F1`; User 2 uses the teal payer accent `#14B8A6`.
 - The application has no user-name configuration or login flow in v1.
-- Seed the fixed categories: Groceries, Housing/Rent, Utilities, Dining, Transport, Entertainment, Subscriptions, and Other.
+- Seed the fixed categories in this display order: Groceries, Housing/Rent, Utilities, Dining, Transport, Entertainment, Health/Beauty, Clothing, and Other (Other always displays last).
 - V1 has no UI for adding or editing categories.
 
 ## 5. Functional Requirements
@@ -69,10 +69,10 @@ The form provides:
 The relational model consists of:
 
 - `users`: seeded household profiles with a name and payer accent color.
-- `categories`: seeded category names and icon identifiers.
+- `categories`: seeded category names, icon identifiers, and display order.
 - `expenses`: positive `DECIMAL(10, 2)` amount, `DATE` expense date, optional description, required payer and category foreign keys, and creation timestamp.
 
-Seed the two fixed users and eight fixed categories through versioned database migrations. The database must enforce positive amounts and valid payer/category references.
+Seed the two fixed users and nine fixed categories through versioned database migrations. The database must enforce positive amounts and valid payer/category references.
 
 ### 6.2 REST API
 
@@ -104,7 +104,7 @@ The server validates request data as well as database constraints. Invalid payer
 ## 9. Acceptance Criteria
 
 - The local development environment can start PostgreSQL with Docker Compose and run the backend and frontend against it.
-- A new database is populated with exactly the two fixed users and eight categories.
+- A new database is populated with exactly the two fixed users and nine categories.
 - A valid expense appears in the selected month's feed and updates household and payer totals.
 - Invalid amounts, future dates, and invalid payer/category references are rejected.
 - The dashboard supports current and past months and does not allow future-month selection.

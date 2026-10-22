@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
+import com.dualexpense.config.TimeConfig;
 import com.dualexpense.dto.ExpenseResponse;
 import com.dualexpense.model.Category;
 import com.dualexpense.model.Expense;
@@ -37,6 +38,14 @@ class ExpenseControllerTest {
     private static final String FIRST_USER_NAME = "Test User One";
     private static final String SECOND_USER_NAME = "Test User Two";
 
+    private static LocalDate today() {
+        return LocalDate.now(TimeConfig.HOUSEHOLD_ZONE);
+    }
+
+    private static YearMonth currentMonth() {
+        return YearMonth.now(TimeConfig.HOUSEHOLD_ZONE);
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -55,14 +64,15 @@ class ExpenseControllerTest {
         categoryRepository.deleteAll();
 
         categoryRepository.saveAll(List.of(
-            new Category("Groceries", "shopping-basket"),
-            new Category("Housing/Rent", "house"),
-            new Category("Utilities", "zap"),
-            new Category("Dining", "utensils"),
-            new Category("Transport", "car"),
-            new Category("Entertainment", "popcorn"),
-            new Category("Subscriptions", "repeat"),
-            new Category("Other", "ellipsis")
+            new Category("Groceries", "shopping-basket", 1),
+            new Category("Housing/Rent", "house", 2),
+            new Category("Utilities", "zap", 3),
+            new Category("Dining", "utensils", 4),
+            new Category("Transport", "car", 5),
+            new Category("Entertainment", "popcorn", 6),
+            new Category("Health/Beauty", "spa", 7),
+            new Category("Clothing", "checkroom", 8),
+            new Category("Other", "ellipsis", 9)
         ));
     }
 
@@ -78,6 +88,22 @@ class ExpenseControllerTest {
         mockMvc.perform(get("/api/v1/categories"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[?(@.name == 'Groceries')].iconIdentifier").value(org.hamcrest.Matchers.hasItem("shopping-basket")));
+    }
+
+    @Test
+    void categoriesAreReturnedInDisplayOrderWithOtherLast() throws Exception {
+        mockMvc.perform(get("/api/v1/categories"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(9))
+            .andExpect(jsonPath("$[0].name").value("Groceries"))
+            .andExpect(jsonPath("$[1].name").value("Housing/Rent"))
+            .andExpect(jsonPath("$[2].name").value("Utilities"))
+            .andExpect(jsonPath("$[3].name").value("Dining"))
+            .andExpect(jsonPath("$[4].name").value("Transport"))
+            .andExpect(jsonPath("$[5].name").value("Entertainment"))
+            .andExpect(jsonPath("$[6].name").value("Health/Beauty"))
+            .andExpect(jsonPath("$[7].name").value("Clothing"))
+            .andExpect(jsonPath("$[8].name").value("Other"));
     }
 
     @Test
@@ -101,13 +127,13 @@ class ExpenseControllerTest {
                         "\"payerId\":%d," +
                         "\"categoryId\":%d," +
                         "\"description\":\"Bakery\"" +
-                        "}", LocalDate.now().minusDays(1), user.getId(), category.getId())))
+                        "}", today().minusDays(1), user.getId(), category.getId())))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.amount").value(87.25))
             .andExpect(jsonPath("$.payerName").value(FIRST_USER_NAME));
 
         mockMvc.perform(get("/api/v1/expenses")
-                .param("month", YearMonth.now().toString()))
+                .param("month", currentMonth().toString()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].description").value("Bakery"));
     }
@@ -126,7 +152,7 @@ class ExpenseControllerTest {
                         "\"payerId\":%d," +
                         "\"categoryId\":%d," +
                         "\"description\":\"%s\"" +
-                        "}", LocalDate.now().minusDays(1), user.getId(), category.getId(), privateDescription)))
+                        "}", today().minusDays(1), user.getId(), category.getId(), privateDescription)))
             .andExpect(status().isCreated());
 
         assertThat(output.getAll())
@@ -142,11 +168,11 @@ class ExpenseControllerTest {
         Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
         Category rent = categoryRepository.findByName("Housing/Rent").orElseThrow();
 
-        expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), LocalDate.now().minusDays(2), userOne, groceries, "Milk"));
-        expenseRepository.save(new Expense(BigDecimal.valueOf(120.00), LocalDate.now().minusDays(1), userTwo, rent, "Rent"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), today().minusDays(2), userOne, groceries, "Milk"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(120.00), today().minusDays(1), userTwo, rent, "Rent"));
 
         mockMvc.perform(get("/api/v1/dashboard/summary")
-                .param("month", YearMonth.now().toString()))
+                .param("month", currentMonth().toString()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.householdTotal").value(165.00))
                 .andExpect(jsonPath("$.userTotals[0].userName").value(FIRST_USER_NAME))
@@ -157,13 +183,13 @@ class ExpenseControllerTest {
     void deleteExpenseRemovesExpense() throws Exception {
         User user = userRepository.findByName(FIRST_USER_NAME).orElseThrow();
         Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
-        Expense saved = expenseRepository.save(new Expense(BigDecimal.valueOf(25.00), LocalDate.now().minusDays(3), user, groceries, "Bread"));
+        Expense saved = expenseRepository.save(new Expense(BigDecimal.valueOf(25.00), today().minusDays(3), user, groceries, "Bread"));
 
         mockMvc.perform(delete("/api/v1/expenses/{id}", saved.getId()))
             .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/v1/expenses")
-                .param("month", YearMonth.now().toString()))
+                .param("month", currentMonth().toString()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(0));
     }
@@ -182,7 +208,7 @@ class ExpenseControllerTest {
             .andExpect(status().isBadRequest());
 
         mockMvc.perform(get("/api/v1/expenses")
-                .param("month", YearMonth.now().plusMonths(1).toString()))
+                .param("month", currentMonth().plusMonths(1).toString()))
             .andExpect(status().isBadRequest());
     }
 }

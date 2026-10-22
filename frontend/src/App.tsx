@@ -18,13 +18,31 @@ type DashboardSummary = {
   topCategories: Array<{ userId: number; userName: string; categoryName: string; total: number }>;
 };
 
-const month = (): string => new Date().toISOString().slice(0, 7);
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const HOUSEHOLD_TIME_ZONE = 'America/New_York';
+
+const easternDateFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: HOUSEHOLD_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+// All "current date" logic is pinned to US Eastern time, matching the backend,
+// regardless of the browser's local time zone.
+const easternISODate = (date: Date): string => {
+  const parts = easternDateFormatter.formatToParts(date);
+  const get = (type: string): string => parts.find((part) => part.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+};
+
+const month = (): string => todayISO().slice(0, 7);
+const todayISO = (): string => easternISODate(new Date());
 const dateOffsetISO = (days: number): string => {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  const [year, monthNum, day] = todayISO().split('-').map(Number);
+  // Anchor at UTC noon so the Eastern local time stays on the same calendar day.
+  const date = new Date(Date.UTC(year, monthNum - 1, day, 12, 0, 0));
+  date.setUTCDate(date.getUTCDate() + days);
+  return easternISODate(date);
 };
 const monthKeyToDate = (value: string): Date => {
   const [year, month] = value.split('-').map(Number);
@@ -47,7 +65,8 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
   'utensils': 'restaurant',
   'car': 'directions_car',
   'popcorn': 'theater_comedy',
-  'repeat': 'sync',
+  'spa': 'spa',
+  'checkroom': 'checkroom',
   'ellipsis': 'more_horiz',
 };
 
@@ -171,10 +190,8 @@ export default function App() {
     });
     setSuccessMessage('Expense added successfully to ledger.');
     await loadData(selectedMonth);
-    setTimeout(() => {
-      setIsAddModalOpen(false);
-      setSuccessMessage(null);
-    }, 800);
+    document.getElementById('expense-amount-input')?.focus();
+    setTimeout(() => setSuccessMessage(null), 2500);
   };
 
   const handleDelete = async (expenseId: number) => {

@@ -1,6 +1,7 @@
 package com.dualexpense.service;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -30,11 +31,13 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final Clock clock;
 
-    public ExpenseService(ExpenseRepository expenseRepository, UserRepository userRepository, CategoryRepository categoryRepository) {
+    public ExpenseService(ExpenseRepository expenseRepository, UserRepository userRepository, CategoryRepository categoryRepository, Clock clock) {
         this.expenseRepository = expenseRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -72,7 +75,7 @@ public class ExpenseService {
             .map(user -> new UserTotal(user.getId(), user.getName(), userTotals.getOrDefault(user.getId(), BigDecimal.ZERO)))
             .toList();
 
-        List<Category> orderedCategories = categoryRepository.findAllByOrderByIdAsc();
+        List<Category> orderedCategories = categoryRepository.findAllByOrderByDisplayOrderAscIdAsc();
         Map<String, Integer> categoryOrder = new java.util.HashMap<>();
         for (int index = 0; index < orderedCategories.size(); index++) {
             categoryOrder.put(orderedCategories.get(index).getName(), index);
@@ -130,7 +133,7 @@ public class ExpenseService {
         if (amount.scale() > 2) {
             throw new IllegalArgumentException("Amount must have at most two decimal places");
         }
-        if (expenseDate == null || expenseDate.isAfter(LocalDate.now())) {
+        if (expenseDate == null || expenseDate.isAfter(LocalDate.now(clock))) {
             throw new IllegalArgumentException("Expense date must be today or earlier");
         }
         if (payerId == null || !userRepository.existsById(payerId)) {

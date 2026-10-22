@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
+import com.dualexpense.config.TimeConfig;
 import com.dualexpense.dto.DashboardSummary;
 import com.dualexpense.model.Category;
 import com.dualexpense.model.Expense;
@@ -19,11 +22,28 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 
 @DataJpaTest
-@Import(ExpenseService.class)
+@Import({ExpenseService.class, ExpenseServiceTest.FixedClockConfig.class})
 class ExpenseServiceTest {
+
+    private static final Clock FIXED_CLOCK =
+        Clock.fixed(LocalDateTime.of(2026, 6, 15, 12, 0).atZone(TimeConfig.HOUSEHOLD_ZONE).toInstant(), TimeConfig.HOUSEHOLD_ZONE);
+
+    @TestConfiguration
+    static class FixedClockConfig {
+        @Bean
+        Clock householdClock() {
+            return FIXED_CLOCK;
+        }
+    }
+
+    private static LocalDate today() {
+        return LocalDate.now(FIXED_CLOCK);
+    }
 
     @Autowired
     private ExpenseService expenseService;
@@ -47,18 +67,19 @@ class ExpenseServiceTest {
         User userTwo = userRepository.save(new User("User 2", "#14B8A6"));
         userRepository.save(new User("User 3", "#F59E0B"));
         categoryRepository.saveAll(List.of(
-            new Category("Groceries", "shopping-basket"),
-            new Category("Housing/Rent", "house"),
-            new Category("Utilities", "zap"),
-            new Category("Dining", "utensils"),
-            new Category("Transport", "car"),
-            new Category("Entertainment", "popcorn"),
-            new Category("Subscriptions", "repeat"),
-            new Category("Other", "ellipsis")
+            new Category("Groceries", "shopping-basket", 1),
+            new Category("Housing/Rent", "house", 2),
+            new Category("Utilities", "zap", 3),
+            new Category("Dining", "utensils", 4),
+            new Category("Transport", "car", 5),
+            new Category("Entertainment", "popcorn", 6),
+            new Category("Health/Beauty", "spa", 7),
+            new Category("Clothing", "checkroom", 8),
+            new Category("Other", "ellipsis", 9)
         ));
 
-        expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), LocalDate.now().minusDays(2), userOne, categoryRepository.findByName("Groceries").orElseThrow(), "Milk and eggs"));
-        expenseRepository.save(new Expense(BigDecimal.valueOf(120.00), LocalDate.now().minusDays(1), userTwo, categoryRepository.findByName("Housing/Rent").orElseThrow(), "Rent"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), today().minusDays(2), userOne, categoryRepository.findByName("Groceries").orElseThrow(), "Milk and eggs"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(120.00), today().minusDays(1), userTwo, categoryRepository.findByName("Housing/Rent").orElseThrow(), "Rent"));
     }
 
     @Test
@@ -66,7 +87,7 @@ class ExpenseServiceTest {
         User user = userRepository.findByName("User 1").orElseThrow();
         Category category = categoryRepository.findByName("Groceries").orElseThrow();
 
-        Expense saved = expenseService.createExpense(BigDecimal.valueOf(87.25), LocalDate.now(), user.getId(), category.getId(), "Bakery");
+        Expense saved = expenseService.createExpense(BigDecimal.valueOf(87.25), today(), user.getId(), category.getId(), "Bakery");
 
         assertThat(saved.getAmount()).isEqualByComparingTo("87.25");
         assertThat(saved.getPayer().getName()).isEqualTo("User 1");
@@ -74,11 +95,25 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void createExpenseUsesHouseholdEasternDateForFutureValidation() {
+        User user = userRepository.findByName("User 1").orElseThrow();
+        Category category = categoryRepository.findByName("Groceries").orElseThrow();
+
+        // The fixed clock is 2026-06-15 12:00 in America/New_York, so June 15 is
+        // "today" and must be accepted while June 16 is "tomorrow" and rejected.
+        expenseService.createExpense(BigDecimal.valueOf(10.00), LocalDate.of(2026, 6, 15), user.getId(), category.getId(), "Eastern today");
+
+        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.valueOf(10.00), LocalDate.of(2026, 6, 16), user.getId(), category.getId(), "Eastern tomorrow"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("today or earlier");
+    }
+
+    @Test
     void createExpenseRejectsInvalidAmount() {
         User user = userRepository.findByName("User 1").orElseThrow();
         Category category = categoryRepository.findByName("Dining").orElseThrow();
 
-        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.ZERO, LocalDate.now(), user.getId(), category.getId(), "Bad"))
+        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.ZERO, today(), user.getId(), category.getId(), "Bad"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("positive");
     }
@@ -89,18 +124,18 @@ class ExpenseServiceTest {
         Category category = categoryRepository.findByName("Groceries").orElseThrow();
         String longDescription = "x".repeat(256);
 
-        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.valueOf(42.00), LocalDate.now().plusDays(1), user.getId(), category.getId(), "Soon"))
+        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.valueOf(42.00), today().plusDays(1), user.getId(), category.getId(), "Soon"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("today or earlier");
 
-        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.valueOf(42.00), LocalDate.now(), user.getId(), category.getId(), longDescription))
+        assertThatThrownBy(() -> expenseService.createExpense(BigDecimal.valueOf(42.00), today(), user.getId(), category.getId(), longDescription))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("255 characters or fewer");
     }
 
     @Test
     void summaryReturnsMonthlyTotals() {
-        DashboardSummary summary = expenseService.getSummaryForMonth(LocalDate.now().getYear(), LocalDate.now().getMonthValue());
+        DashboardSummary summary = expenseService.getSummaryForMonth(today().getYear(), today().getMonthValue());
 
         assertThat(summary.householdTotal()).isEqualByComparingTo("165.00");
         assertThat(summary.userTotals()).hasSize(3);
@@ -115,10 +150,10 @@ class ExpenseServiceTest {
         Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
         Category rent = categoryRepository.findByName("Housing/Rent").orElseThrow();
 
-        expenseRepository.save(new Expense(BigDecimal.valueOf(50.00), LocalDate.now().minusDays(4), user, groceries, "Produce"));
-        expenseRepository.save(new Expense(BigDecimal.valueOf(50.00), LocalDate.now().minusDays(3), user, rent, "Rent-like"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(50.00), today().minusDays(4), user, groceries, "Produce"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(50.00), today().minusDays(3), user, rent, "Rent-like"));
 
-        DashboardSummary summary = expenseService.getSummaryForMonth(LocalDate.now().getYear(), LocalDate.now().getMonthValue());
+        DashboardSummary summary = expenseService.getSummaryForMonth(today().getYear(), today().getMonthValue());
 
         assertThat(summary.topCategories())
             .filteredOn(entry -> entry.userId().equals(user.getId()))
@@ -128,7 +163,7 @@ class ExpenseServiceTest {
 
     @Test
     void summaryReturnsZeroAndNoTopCategoryForUsersWithNoExpenses() {
-        DashboardSummary summary = expenseService.getSummaryForMonth(LocalDate.now().getYear(), LocalDate.now().getMonthValue());
+        DashboardSummary summary = expenseService.getSummaryForMonth(today().getYear(), today().getMonthValue());
 
         assertThat(summary.userTotals())
             .filteredOn(entry -> entry.userName().equals("User 3"))

@@ -17,6 +17,15 @@ type DashboardSummary = {
   userTotals: Array<{ userId: number; userName: string; total: number }>;
   topCategories: Array<{ userId: number; userName: string; categoryName: string; total: number }>;
 };
+type Theme = 'light' | 'dark';
+
+const THEME_STORAGE_KEY = 'theme';
+
+const getInitialTheme = (): Theme => {
+  const fromDom = document.documentElement.getAttribute('data-theme');
+  if (fromDom === 'light' || fromDom === 'dark') return fromDom;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
 
 const HOUSEHOLD_TIME_ZONE = 'America/New_York';
 
@@ -106,6 +115,18 @@ export default function App() {
 
   const [form, setForm] = useState(() => createDefaultFormState());
   const [selectedMonth, setSelectedMonth] = useState(() => month());
+  const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // localStorage unavailable (e.g. private mode) — theme still applies for the session.
+    }
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
   const syncDefaultFormValues = (nextUsers: User[], nextCategories: Category[]) => {
     setForm((current) => ({
@@ -290,6 +311,19 @@ export default function App() {
                 <span className="material-symbols-outlined">chevron_right</span>
               </button>
             </div>
+
+            {/* Dark Mode Toggle */}
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <span className="material-symbols-outlined">
+                {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+              </span>
+            </button>
 
             {/* CTA Button to open Add Expense Modal */}
             <button

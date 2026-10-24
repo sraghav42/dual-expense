@@ -1,86 +1,19 @@
 import { FormEvent, useEffect, useState } from 'react';
-
-type User = { id: number; name: string; payerAccent: string };
-type Category = { id: number; name: string; iconIdentifier: string };
-type Expense = {
-  id: number;
-  amount: number;
-  expenseDate: string;
-  payerId: number;
-  payerName: string;
-  categoryId: number;
-  categoryName: string;
-  description: string | null;
-};
-type DashboardSummary = {
-  householdTotal: number;
-  userTotals: Array<{ userId: number; userName: string; total: number }>;
-  topCategories: Array<{ userId: number; userName: string; categoryName: string; total: number }>;
-};
-
-const HOUSEHOLD_TIME_ZONE = 'America/New_York';
-
-const easternDateFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: HOUSEHOLD_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-// All "current date" logic is pinned to US Eastern time, matching the backend,
-// regardless of the browser's local time zone.
-const easternISODate = (date: Date): string => {
-  const parts = easternDateFormatter.formatToParts(date);
-  const get = (type: string): string => parts.find((part) => part.type === type)?.value ?? '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
-};
-
-const month = (): string => todayISO().slice(0, 7);
-const todayISO = (): string => easternISODate(new Date());
-const dateOffsetISO = (days: number): string => {
-  const [year, monthNum, day] = todayISO().split('-').map(Number);
-  // Anchor at UTC noon so the Eastern local time stays on the same calendar day.
-  const date = new Date(Date.UTC(year, monthNum - 1, day, 12, 0, 0));
-  date.setUTCDate(date.getUTCDate() + days);
-  return easternISODate(date);
-};
-const monthKeyToDate = (value: string): Date => {
-  const [year, month] = value.split('-').map(Number);
-  return new Date(year, month - 1, 1);
-};
-const monthToLabel = (value: string): string =>
-  monthKeyToDate(value).toLocaleString('en-US', { month: 'long', year: 'numeric' });
-const addMonth = (value: string, delta: number): string => {
-  const date = monthKeyToDate(value);
-  date.setMonth(date.getMonth() + delta);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-};
-const formatUsd = (value: number): string =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-
-const CATEGORY_ICON_MAP: Record<string, string> = {
-  'shopping-basket': 'shopping_basket',
-  'house': 'apartment',
-  'zap': 'bolt',
-  'utensils': 'restaurant',
-  'car': 'directions_car',
-  'popcorn': 'theater_comedy',
-  'spa': 'spa',
-  'checkroom': 'checkroom',
-  'ellipsis': 'more_horiz',
-};
-
-const getCategoryIcon = (iconIdentifier: string): string => {
-  return CATEGORY_ICON_MAP[iconIdentifier] || iconIdentifier || 'category';
-};
-
-const getDateGroupLabel = (dateISO: string): string => {
-  if (dateISO === todayISO()) return 'Today';
-  if (dateISO === dateOffsetISO(-1)) return 'Yesterday';
-  const [y, m, d] = dateISO.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
+import { ActivityFeed } from './ActivityFeed';
+import { CategoryBarChart } from './CategoryBarChart';
+import {
+  Category,
+  DashboardSummary,
+  Expense,
+  User,
+  addMonth,
+  dateOffsetISO,
+  formatUsd,
+  getCategoryIcon,
+  month,
+  monthToLabel,
+  todayISO,
+} from './utils';
 
 const createDefaultFormState = (payerId?: number, categoryId?: number) => ({
   amount: '',
@@ -138,9 +71,16 @@ export default function App() {
     syncDefaultFormValues(nextUsers, nextCategories);
   };
 
+  const currentMonth = month();
+
+  // The All Expenses tab is pinned to the current month; the dashboard
+  // follows the month navigator.
+  const activeMonth = activeNavTab === 'all-expenses' ? currentMonth : selectedMonth;
+
   useEffect(() => {
-    void loadData(selectedMonth);
-  }, [selectedMonth]);
+    void loadData(activeMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMonth]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -189,7 +129,7 @@ export default function App() {
       expenseDate: todayISO(),
     });
     setSuccessMessage('Expense added successfully to ledger.');
-    await loadData(selectedMonth);
+    await loadData(activeMonth);
     document.getElementById('expense-amount-input')?.focus();
     setTimeout(() => setSuccessMessage(null), 2500);
   };
@@ -209,22 +149,14 @@ export default function App() {
         throw new Error(errorPayload.error ?? 'Unable to delete expense.');
       }
 
-      await loadData(selectedMonth);
+      await loadData(activeMonth);
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : 'Unable to delete expense.');
     }
   };
 
-  const currentMonth = month();
   const isCurrentMonth = selectedMonth === currentMonth;
   const householdTotal = summary?.householdTotal ?? 0;
-
-  // Filtered and chronologically grouped expenses
-  const filteredExpenses = selectedPayerFilter === 'all'
-    ? expenses
-    : expenses.filter((e) => String(e.payerId) === selectedPayerFilter);
-
-  const groupedDates = Array.from(new Set(filteredExpenses.map((e) => e.expenseDate))).sort((a, b) => b.localeCompare(a));
 
   // Selected Category name
   const currentCategory = categories.find((c) => String(c.id) === form.categoryId);
@@ -254,8 +186,8 @@ export default function App() {
                 className={`nav-tab ${activeNavTab === 'all-expenses' ? 'active' : ''}`}
                 onClick={() => {
                   setActiveNavTab('all-expenses');
-                  const feedEl = document.getElementById('activity-feed');
-                  if (feedEl) feedEl.scrollIntoView({ behavior: 'smooth' });
+                  setSelectedMonth(currentMonth);
+                  setSelectedPayerFilter('all');
                 }}
               >
                 All Expenses
@@ -264,8 +196,12 @@ export default function App() {
           </div>
 
           <div className="nav-actions">
-            {/* Month Navigator */}
-            <div className="month-selector" aria-label="Month navigation">
+            {/* Month Navigator (dashboard only — All Expenses is pinned to the current month) */}
+            <div
+              className="month-selector"
+              aria-label="Month navigation"
+              style={activeNavTab === 'all-expenses' ? { visibility: 'hidden' } : undefined}
+            >
               <button
                 type="button"
                 className="month-nav-btn"
@@ -310,259 +246,179 @@ export default function App() {
 
       {/* Main Page Shell */}
       <main className="page-shell">
-        {/* Step 3: Consolidated Spending Hero Card */}
-        <section className="hero-card">
-          <div className="hero-ambient-glow" />
-          <div className="hero-header-row">
-            <div>
-              <div className="hero-eyebrow">
-                <span className="eyebrow-dot" />
-                <span className="eyebrow-text">Shared Household Expense</span>
-              </div>
-              <h1>{monthToLabel(selectedMonth)} Household Spending</h1>
-              <p className="hero-subtitle">Dual expenditure log</p>
-            </div>
-            <div className="hero-amount-block">
-              <div className="hero-amount-value">{formatUsd(householdTotal)}</div>
-              <div className="hero-count-pill">
-                <span className="material-symbols-outlined">receipt_long</span>
-                <span>{expenses.length} transaction{expenses.length === 1 ? '' : 's'} this month</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Dynamic Bicolor Split Proportion Bar */}
-          <div className="proportion-box">
-            <div className="proportion-header">
-              {summary?.userTotals.map((userEntry, index) => {
-                const userObj = users.find((u) => u.id === userEntry.userId);
-                const accent = userObj?.payerAccent ?? (index === 0 ? '#0f1e18' : '#29a195');
-                const userPercent = householdTotal > 0 ? (userEntry.total / householdTotal) * 100 : 0;
-                return (
-                  <div key={userEntry.userId} className="proportion-user-info">
-                    <span className="user-color-indicator" style={{ background: accent }} />
-                    <span className="proportion-user-name">{userEntry.userName}</span>
-                    <span className="proportion-user-stats">
-                      {userPercent.toFixed(0)}% · {formatUsd(userEntry.total)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="proportion-track">
-              {summary?.userTotals.map((userEntry, index) => {
-                const userObj = users.find((u) => u.id === userEntry.userId);
-                const accent = userObj?.payerAccent ?? (index === 0 ? '#0f1e18' : '#29a195');
-                const userPercent = householdTotal > 0 ? (userEntry.total / householdTotal) * 100 : 50;
-                return (
-                  <div
-                    key={userEntry.userId}
-                    className="proportion-segment"
-                    style={{
-                      width: `${userPercent}%`,
-                      background: accent,
-                    }}
-                    title={`${userEntry.userName}: ${userPercent.toFixed(1)}%`}
-                  />
-                );
-              })}
-            </div>
-
-            <div className="proportion-footer">
-              <span className="left-note">
-                <span className="material-symbols-outlined">info</span>
-                <span>Unsplit Joint Accounting</span>
-              </span>
-              <span>Balance baseline: Equal equity goal</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Step 4: Individual User Summary Cards */}
-        <section className="user-cards-grid">
-          {summary?.userTotals.map((entry) => {
-            const userObj = users.find((u) => u.id === entry.userId);
-            const userAccent = userObj?.payerAccent ?? '#0f1e18';
-            const topCategory = summary.topCategories.find((item) => item.userId === entry.userId);
-            const share = householdTotal > 0 ? (entry.total / householdTotal) * 100 : 0;
-            const userExpenses = expenses.filter((e) => e.payerId === entry.userId);
-            const count = userExpenses.length;
-            const avg = count > 0 ? entry.total / count : 0;
-
-            const topCatObj = topCategory
-              ? categories.find((c) => c.name.toLowerCase() === topCategory.categoryName.toLowerCase())
-              : null;
-            const topCatIcon = topCatObj ? getCategoryIcon(topCatObj.iconIdentifier) : 'category';
-
-            return (
-              <article key={entry.userId} className="user-summary-card">
+        {activeNavTab === 'dashboard' ? (
+          <>
+            {/* Consolidated Spending Hero Card */}
+            <section className="hero-card">
+              <div className="hero-ambient-glow" />
+              <div className="hero-header-row">
                 <div>
-                  <div className="card-top-row">
-                    <div className="card-user-meta">
-                      <div className="user-avatar-circle" style={{ background: userAccent }}>
-                        {entry.userName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="user-name-role">
-                        <div className="user-name-title">
-                          <h2>{entry.userName}</h2>
-                          <span className="role-tag">Co-Tracker</span>
-                        </div>
-                        <span className="user-subtext">Household Contributor</span>
-                      </div>
-                    </div>
-                    <span className="material-symbols-outlined" style={{ color: 'var(--outline-variant)' }}>
-                      more_horiz
-                    </span>
+                  <div className="hero-eyebrow">
+                    <span className="eyebrow-dot" />
+                    <span className="eyebrow-text">Shared Household Expense</span>
                   </div>
-
-                  <div className="card-amount-block">
-                    <div className="card-eyebrow">{monthToLabel(selectedMonth)} Logged</div>
-                    <div className="card-amount-flex">
-                      <strong>{formatUsd(entry.total)}</strong>
-                      <span className="share-trend-pill">
-                        <span className="material-symbols-outlined">north_east</span>
-                        <span>{share.toFixed(0)}% of home</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Top Category Pill */}
-                  <div className="top-category-pill">
-                    <div className="top-cat-left">
-                      <div className="top-cat-icon">
-                        <span className="material-symbols-outlined">{topCatIcon}</span>
-                      </div>
-                      <div className="top-cat-text">
-                        <div className="top-cat-eyebrow">Top Expenditure</div>
-                        <div className="top-cat-name">
-                          {topCategory ? topCategory.categoryName : 'No expenses'}
-                        </div>
-                      </div>
-                    </div>
-                    {topCategory && (
-                      <span className="top-cat-amount">{formatUsd(topCategory.total)}</span>
-                    )}
+                  <h1>{monthToLabel(selectedMonth)} Household Spending</h1>
+                  <p className="hero-subtitle">Dual expenditure log</p>
+                </div>
+                <div className="hero-amount-block">
+                  <div className="hero-amount-value">{formatUsd(householdTotal)}</div>
+                  <div className="hero-count-pill">
+                    <span className="material-symbols-outlined">receipt_long</span>
+                    <span>{expenses.length} transaction{expenses.length === 1 ? '' : 's'} this month</span>
                   </div>
                 </div>
+              </div>
 
-                <div className="card-footer-metrics">
-                  <span className="metric-item">
-                    <span className="material-symbols-outlined">data_table</span>
-                    <span>{count} logged expense{count === 1 ? '' : 's'}</span>
+              {/* Dynamic Bicolor Split Proportion Bar */}
+              <div className="proportion-box">
+                <div className="proportion-header">
+                  {summary?.userTotals.map((userEntry, index) => {
+                    const userObj = users.find((u) => u.id === userEntry.userId);
+                    const accent = userObj?.payerAccent ?? (index === 0 ? '#0f1e18' : '#29a195');
+                    const userPercent = householdTotal > 0 ? (userEntry.total / householdTotal) * 100 : 0;
+                    return (
+                      <div key={userEntry.userId} className="proportion-user-info">
+                        <span className="user-color-indicator" style={{ background: accent }} />
+                        <span className="proportion-user-name">{userEntry.userName}</span>
+                        <span className="proportion-user-stats">
+                          {userPercent.toFixed(0)}% · {formatUsd(userEntry.total)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="proportion-track">
+                  {summary?.userTotals.map((userEntry, index) => {
+                    const userObj = users.find((u) => u.id === userEntry.userId);
+                    const accent = userObj?.payerAccent ?? (index === 0 ? '#0f1e18' : '#29a195');
+                    const userPercent = householdTotal > 0 ? (userEntry.total / householdTotal) * 100 : 50;
+                    return (
+                      <div
+                        key={userEntry.userId}
+                        className="proportion-segment"
+                        style={{
+                          width: `${userPercent}%`,
+                          background: accent,
+                        }}
+                        title={`${userEntry.userName}: ${userPercent.toFixed(1)}%`}
+                      />
+                    );
+                  })}
+                </div>
+
+                <div className="proportion-footer">
+                  <span className="left-note">
+                    <span className="material-symbols-outlined">info</span>
+                    <span>Unsplit Joint Accounting</span>
                   </span>
-                  <span className="metric-avg">Avg. {formatUsd(avg)}/item</span>
+                  <span>Balance baseline: Equal equity goal</span>
                 </div>
-              </article>
-            );
-          })}
-        </section>
+              </div>
+            </section>
 
-        {/* Step 5: Chronological Activity Feed */}
-        <section className="activity-section" id="activity-feed">
-          <div className="feed-header-bar">
-            <div className="feed-title-block">
-              <h2>Recent Activity</h2>
-              <p>Chronological expenditure log for {monthToLabel(selectedMonth)}</p>
-            </div>
+            {/* Individual User Summary Cards */}
+            <section className="user-cards-grid">
+              {summary?.userTotals.map((entry) => {
+                const userObj = users.find((u) => u.id === entry.userId);
+                const userAccent = userObj?.payerAccent ?? '#0f1e18';
+                const topCategory = summary.topCategories.find((item) => item.userId === entry.userId);
+                const share = householdTotal > 0 ? (entry.total / householdTotal) * 100 : 0;
+                const userExpenses = expenses.filter((e) => e.payerId === entry.userId);
+                const count = userExpenses.length;
+                const avg = count > 0 ? entry.total / count : 0;
 
-            {/* Filter Tabs */}
-            <div className="feed-filter-tabs">
-              <button
-                type="button"
-                className={`filter-tab-btn ${selectedPayerFilter === 'all' ? 'active' : ''}`}
-                onClick={() => setSelectedPayerFilter('all')}
-              >
-                All
-              </button>
-              {users.map((u) => (
-                <button
-                  key={u.id}
-                  type="button"
-                  className={`filter-tab-btn ${selectedPayerFilter === String(u.id) ? 'active' : ''}`}
-                  onClick={() => setSelectedPayerFilter(String(u.id))}
-                >
-                  {u.name}
-                </button>
-              ))}
-            </div>
-          </div>
+                const topCatObj = topCategory
+                  ? categories.find((c) => c.name.toLowerCase() === topCategory.categoryName.toLowerCase())
+                  : null;
+                const topCatIcon = topCatObj ? getCategoryIcon(topCatObj.iconIdentifier) : 'category';
 
-          {deleteError && (
-            <div className="form-message-banner error" style={{ marginBottom: '16px' }}>
-              <span className="material-symbols-outlined">error</span>
-              <span>{deleteError}</span>
-            </div>
-          )}
-
-          {filteredExpenses.length === 0 ? (
-            <div className="feed-empty-state">
-              <span className="material-symbols-outlined">receipt</span>
-              <strong>No expenses recorded</strong>
-              <span>No transactions found for {monthToLabel(selectedMonth)} with the selected filter.</span>
-            </div>
-          ) : (
-            <div className="date-groups-container">
-              {groupedDates.map((dateISO) => {
-                const groupItems = filteredExpenses.filter((e) => e.expenseDate === dateISO);
                 return (
-                  <div key={dateISO} className="date-group">
-                    <div className="date-group-header">{getDateGroupLabel(dateISO)}</div>
-                    <ul className="feed-items-list">
-                      {groupItems.map((expense) => {
-                        const userObj = users.find((u) => u.id === expense.payerId);
-                        const accent = userObj?.payerAccent ?? '#0f1e18';
-                        const catObj = categories.find((c) => c.id === expense.categoryId);
-                        const catIcon = catObj ? getCategoryIcon(catObj.iconIdentifier) : 'category';
-
-                        return (
-                          <li key={expense.id} className="feed-item">
-                            <div className="feed-item-left">
-                              <div className="feed-cat-icon">
-                                <span className="material-symbols-outlined">{catIcon}</span>
-                              </div>
-                              <div className="feed-item-details">
-                                <div className="feed-item-title">
-                                  {expense.description || expense.categoryName}
-                                </div>
-                                <div className="feed-item-subtitle">
-                                  <span>{expense.categoryName}</span>
-                                  <span>•</span>
-                                  <span
-                                    className="feed-payer-badge"
-                                    style={{ background: accent }}
-                                  >
-                                    {expense.payerName}
-                                  </span>
-                                </div>
-                              </div>
+                  <article key={entry.userId} className="user-summary-card">
+                    <div>
+                      <div className="card-top-row">
+                        <div className="card-user-meta">
+                          <div className="user-avatar-circle" style={{ background: userAccent }}>
+                            {entry.userName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="user-name-role">
+                            <div className="user-name-title">
+                              <h2>{entry.userName}</h2>
+                              <span className="role-tag">Co-Tracker</span>
                             </div>
+                            <span className="user-subtext">Household Contributor</span>
+                          </div>
+                        </div>
+                        <span className="material-symbols-outlined" style={{ color: 'var(--outline-variant)' }}>
+                          more_horiz
+                        </span>
+                      </div>
 
-                            <div className="feed-item-right">
-                              <div className="feed-amount">{formatUsd(expense.amount)}</div>
-                              <button
-                                type="button"
-                                className="feed-delete-btn"
-                                onClick={() => void handleDelete(expense.id)}
-                                title="Delete expense"
-                                aria-label="Delete expense"
-                              >
-                                <span className="material-symbols-outlined">delete</span>
-                              </button>
+                      <div className="card-amount-block">
+                        <div className="card-eyebrow">{monthToLabel(selectedMonth)} Logged</div>
+                        <div className="card-amount-flex">
+                          <strong>{formatUsd(entry.total)}</strong>
+                          <span className="share-trend-pill">
+                            <span className="material-symbols-outlined">north_east</span>
+                            <span>{share.toFixed(0)}% of home</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Top Category Pill */}
+                      <div className="top-category-pill">
+                        <div className="top-cat-left">
+                          <div className="top-cat-icon">
+                            <span className="material-symbols-outlined">{topCatIcon}</span>
+                          </div>
+                          <div className="top-cat-text">
+                            <div className="top-cat-eyebrow">Top Expenditure</div>
+                            <div className="top-cat-name">
+                              {topCategory ? topCategory.categoryName : 'No expenses'}
                             </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
+                          </div>
+                        </div>
+                        {topCategory && (
+                          <span className="top-cat-amount">{formatUsd(topCategory.total)}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="card-footer-metrics">
+                      <span className="metric-item">
+                        <span className="material-symbols-outlined">data_table</span>
+                        <span>{count} logged expense{count === 1 ? '' : 's'}</span>
+                      </span>
+                      <span className="metric-avg">Avg. {formatUsd(avg)}/item</span>
+                    </div>
+                  </article>
                 );
               })}
-            </div>
-          )}
-        </section>
+            </section>
+
+            {/* Consolidated spending-by-category bar chart */}
+            <CategoryBarChart
+              expenses={expenses}
+              categories={categories}
+              monthLabel={monthToLabel(selectedMonth)}
+            />
+          </>
+        ) : (
+          /* All Expenses tab: chronological feed, pinned to the current month */
+          <ActivityFeed
+            expenses={expenses}
+            users={users}
+            categories={categories}
+            monthLabel={monthToLabel(activeMonth)}
+            selectedPayerFilter={selectedPayerFilter}
+            onPayerFilterChange={setSelectedPayerFilter}
+            deleteError={deleteError}
+            onDelete={(expenseId) => void handleDelete(expenseId)}
+          />
+        )}
       </main>
 
-      {/* Step 6: Dedicated Add Expense Modal */}
+      {/* Dedicated Add Expense Modal */}
       {isAddModalOpen && (
         <div
           className="modal-backdrop"

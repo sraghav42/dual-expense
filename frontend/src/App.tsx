@@ -15,97 +15,6 @@ import {
   todayISO,
 } from './utils';
 
-type User = { id: number; name: string; payerAccent: string };
-type Category = { id: number; name: string; iconIdentifier: string };
-type Expense = {
-  id: number;
-  amount: number;
-  expenseDate: string;
-  payerId: number;
-  payerName: string;
-  categoryId: number;
-  categoryName: string;
-  description: string | null;
-};
-type DashboardSummary = {
-  householdTotal: number;
-  userTotals: Array<{ userId: number; userName: string; total: number }>;
-  topCategories: Array<{ userId: number; userName: string; categoryName: string; total: number }>;
-};
-type Theme = 'light' | 'dark';
-
-const THEME_STORAGE_KEY = 'theme';
-
-const getInitialTheme = (): Theme => {
-  const fromDom = document.documentElement.getAttribute('data-theme');
-  if (fromDom === 'light' || fromDom === 'dark') return fromDom;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
-
-const HOUSEHOLD_TIME_ZONE = 'America/New_York';
-
-const easternDateFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: HOUSEHOLD_TIME_ZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-// All "current date" logic is pinned to US Eastern time, matching the backend,
-// regardless of the browser's local time zone.
-const easternISODate = (date: Date): string => {
-  const parts = easternDateFormatter.formatToParts(date);
-  const get = (type: string): string => parts.find((part) => part.type === type)?.value ?? '';
-  return `${get('year')}-${get('month')}-${get('day')}`;
-};
-
-const month = (): string => todayISO().slice(0, 7);
-const todayISO = (): string => easternISODate(new Date());
-const dateOffsetISO = (days: number): string => {
-  const [year, monthNum, day] = todayISO().split('-').map(Number);
-  // Anchor at UTC noon so the Eastern local time stays on the same calendar day.
-  const date = new Date(Date.UTC(year, monthNum - 1, day, 12, 0, 0));
-  date.setUTCDate(date.getUTCDate() + days);
-  return easternISODate(date);
-};
-const monthKeyToDate = (value: string): Date => {
-  const [year, month] = value.split('-').map(Number);
-  return new Date(year, month - 1, 1);
-};
-const monthToLabel = (value: string): string =>
-  monthKeyToDate(value).toLocaleString('en-US', { month: 'long', year: 'numeric' });
-const addMonth = (value: string, delta: number): string => {
-  const date = monthKeyToDate(value);
-  date.setMonth(date.getMonth() + delta);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-};
-const formatUsd = (value: number): string =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
-
-const CATEGORY_ICON_MAP: Record<string, string> = {
-  'shopping-basket': 'shopping_basket',
-  'house': 'apartment',
-  'zap': 'bolt',
-  'utensils': 'restaurant',
-  'car': 'directions_car',
-  'popcorn': 'theater_comedy',
-  'spa': 'spa',
-  'checkroom': 'checkroom',
-  'ellipsis': 'more_horiz',
-};
-
-const getCategoryIcon = (iconIdentifier: string): string => {
-  return CATEGORY_ICON_MAP[iconIdentifier] || iconIdentifier || 'category';
-};
-
-const getDateGroupLabel = (dateISO: string): string => {
-  if (dateISO === todayISO()) return 'Today';
-  if (dateISO === dateOffsetISO(-1)) return 'Yesterday';
-  const [y, m, d] = dateISO.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
 const createDefaultFormState = (payerId?: number, categoryId?: number) => ({
   amount: '',
   payerId: payerId ? String(payerId) : '',
@@ -130,18 +39,6 @@ export default function App() {
 
   const [form, setForm] = useState(() => createDefaultFormState());
   const [selectedMonth, setSelectedMonth] = useState(() => month());
-  const [theme, setTheme] = useState<Theme>(() => getInitialTheme());
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {
-      // localStorage unavailable (e.g. private mode) — theme still applies for the session.
-    }
-  }, [theme]);
-
-  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
   const syncDefaultFormValues = (nextUsers: User[], nextCategories: Category[]) => {
     setForm((current) => ({
@@ -329,19 +226,6 @@ export default function App() {
                 <span className="material-symbols-outlined">chevron_right</span>
               </button>
             </div>
-
-            {/* Dark Mode Toggle */}
-            <button
-              type="button"
-              className="theme-toggle-btn"
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              <span className="material-symbols-outlined">
-                {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-              </span>
-            </button>
 
             {/* CTA Button to open Add Expense Modal */}
             <button

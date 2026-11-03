@@ -95,9 +95,7 @@ export default function App() {
 
   const currentMonth = month();
 
-  // The All Expenses tab is pinned to the current month; the dashboard
-  // follows the month navigator.
-  const activeMonth = activeNavTab === 'all-expenses' ? currentMonth : selectedMonth;
+  const activeMonth = selectedMonth;
 
   useEffect(() => {
     void loadData(activeMonth);
@@ -218,12 +216,8 @@ export default function App() {
           </div>
 
           <div className="nav-actions">
-            {/* Month Navigator (dashboard only — All Expenses is pinned to the current month) */}
-            <div
-              className="month-selector"
-              aria-label="Month navigation"
-              style={activeNavTab === 'all-expenses' ? { visibility: 'hidden' } : undefined}
-            >
+            {/* Shared month navigator for the dashboard and All Expenses */}
+            <div className="month-selector" aria-label="Month navigation">
               <button
                 type="button"
                 className="month-nav-btn"
@@ -439,7 +433,7 @@ export default function App() {
             />
           </>
         ) : (
-          /* All Expenses tab: chronological feed, pinned to the current month */
+          /* All Expenses tab: chronological feed for the selected month */
           <ActivityFeed
             expenses={expenses}
             users={users}

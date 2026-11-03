@@ -167,9 +167,10 @@ class ExpenseControllerTest {
         User userTwo = userRepository.findByName(SECOND_USER_NAME).orElseThrow();
         Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
         Category rent = categoryRepository.findByName("Housing/Rent").orElseThrow();
+        LocalDate expenseDate = today();
 
-        expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), today().minusDays(2), userOne, groceries, "Milk"));
-        expenseRepository.save(new Expense(BigDecimal.valueOf(120.00), today().minusDays(1), userTwo, rent, "Rent"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(45.00), expenseDate, userOne, groceries, "Milk"));
+        expenseRepository.save(new Expense(BigDecimal.valueOf(120.00), expenseDate, userTwo, rent, "Rent"));
 
         mockMvc.perform(get("/api/v1/dashboard/summary")
                 .param("month", currentMonth().toString()))

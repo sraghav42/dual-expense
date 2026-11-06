@@ -10,8 +10,7 @@ type Props = {
   monthLabel: string;
   selectedPayerFilter: 'all' | string;
   onPayerFilterChange: (value: 'all' | string) => void;
-  deleteError: string | null;
-  onDelete: (expenseId: number) => void;
+  onDelete: (expense: Expense) => void;
 };
 
 export function ActivityFeed({
@@ -21,7 +20,6 @@ export function ActivityFeed({
   monthLabel,
   selectedPayerFilter,
   onPayerFilterChange,
-  deleteError,
   onDelete,
 }: Props) {
   const filteredExpenses =
@@ -62,13 +60,6 @@ export function ActivityFeed({
           ))}
         </div>
       </div>
-
-      {deleteError && (
-        <div className="form-message-banner error" style={{ marginBottom: '16px' }}>
-          <span className="material-symbols-outlined">error</span>
-          <span>{deleteError}</span>
-        </div>
-      )}
 
       {filteredExpenses.length === 0 ? (
         <div className="feed-empty-state">
@@ -115,7 +106,7 @@ export function ActivityFeed({
                           <button
                             type="button"
                             className="feed-delete-btn"
-                            onClick={() => onDelete(expense.id)}
+                            onClick={() => onDelete(expense)}
                             title="Delete expense"
                             aria-label="Delete expense"
                           >

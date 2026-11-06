@@ -10,6 +10,7 @@ import {
   dateOffsetISO,
   formatUsd,
   getCategoryIcon,
+  getDateGroupLabel,
   month,
   monthToLabel,
   todayISO,
@@ -46,6 +47,7 @@ export default function App() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [expensePendingDelete, setExpensePendingDelete] = useState<Expense | null>(null);
 
   const [form, setForm] = useState(() => createDefaultFormState());
   const [selectedMonth, setSelectedMonth] = useState(() => month());
@@ -156,22 +158,25 @@ export default function App() {
     setTimeout(() => setSuccessMessage(null), 2500);
   };
 
-  const handleDelete = async (expenseId: number) => {
-    const confirmed = window.confirm('Delete this expense?');
-    if (!confirmed) {
-      return;
-    }
+  const requestDelete = (expense: Expense) => {
+    setDeleteError(null);
+    setExpensePendingDelete(expense);
+  };
+
+  const confirmDelete = async () => {
+    if (!expensePendingDelete) return;
 
     setDeleteError(null);
 
     try {
-      const response = await fetch(`/api/v1/expenses/${expenseId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/v1/expenses/${expensePendingDelete.id}`, { method: 'DELETE' });
       if (!response.ok) {
         const errorPayload = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(errorPayload.error ?? 'Unable to delete expense.');
       }
 
       await loadData(activeMonth);
+      setExpensePendingDelete(null);
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : 'Unable to delete expense.');
     }
@@ -447,8 +452,7 @@ export default function App() {
             monthLabel={monthToLabel(activeMonth)}
             selectedPayerFilter={selectedPayerFilter}
             onPayerFilterChange={setSelectedPayerFilter}
-            deleteError={deleteError}
-            onDelete={(expenseId) => void handleDelete(expenseId)}
+            onDelete={(expense) => requestDelete(expense)}
           />
         )}
       </main>
@@ -647,6 +651,89 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {expensePendingDelete && (
+        <div
+          className="modal-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setExpensePendingDelete(null);
+              setDeleteError(null);
+            }
+          }}
+        >
+          <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+            <div className="modal-header-row">
+              <div>
+                <div className="modal-eyebrow">
+                  <span className="dot error" />
+                  <span>Delete Expense</span>
+                </div>
+                <h2 id="delete-modal-title">Delete this expense?</h2>
+                <p className="modal-subtitle">This action cannot be undone.</p>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => {
+                  setExpensePendingDelete(null);
+                  setDeleteError(null);
+                }}
+                title="Close"
+                aria-label="Close"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {deleteError && (
+              <div className="form-message-banner error">
+                <span className="material-symbols-outlined">error</span>
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="delete-summary-box">
+              <div className="delete-summary-amount">
+                {formatUsd(expensePendingDelete.amount)}
+              </div>
+              <div className="delete-summary-title">
+                {expensePendingDelete.description || expensePendingDelete.categoryName}
+              </div>
+              <div className="delete-summary-meta">
+                <span
+                  className="feed-payer-badge"
+                  style={{
+                    background: users.find((u) => u.id === expensePendingDelete.payerId)?.payerAccent ?? '#0f1e18',
+                  }}
+                >
+                  {expensePendingDelete.payerName}
+                </span>
+                <span>•</span>
+                <span>{getDateGroupLabel(expensePendingDelete.expenseDate)}</span>
+              </div>
+            </div>
+
+            <div className="modal-actions-row">
+              <button type="button" className="modal-delete-btn" onClick={confirmDelete}>
+                <span className="material-symbols-outlined">delete</span>
+                <span>Delete</span>
+              </button>
+              <button
+                type="button"
+                className="modal-cancel-btn"
+                onClick={() => {
+                  setExpensePendingDelete(null);
+                  setDeleteError(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

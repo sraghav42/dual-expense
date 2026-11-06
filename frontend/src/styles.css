@@ -1007,6 +1007,10 @@ button, input, select, textarea {
   background: var(--secondary);
 }
 
+.modal-eyebrow .dot.error {
+  background: var(--error);
+}
+
 .modal-eyebrow span {
   font-size: 11px;
   font-weight: 600;
@@ -1428,6 +1432,66 @@ button, input, select, textarea {
 .modal-cancel-btn:hover {
   background: var(--surface-container);
   color: var(--text-primary);
+}
+
+/* Delete confirmation modal */
+.modal-delete-btn {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--error-container);
+  color: var(--error);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.modal-delete-btn:hover {
+  background: var(--error);
+  color: white;
+}
+
+.modal-delete-btn:active {
+  transform: scale(0.99);
+}
+
+.modal-delete-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* Delete summary box */
+.delete-summary-box {
+  background: var(--surface-container-low);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delete-summary-amount {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.delete-summary-title {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.delete-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 /* --------------------------------------------------------------------------

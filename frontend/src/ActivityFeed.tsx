@@ -11,7 +11,7 @@ type Props = {
   selectedPayerFilter: 'all' | string;
   onPayerFilterChange: (value: 'all' | string) => void;
   deleteError: string | null;
-  onDelete: (expenseId: number) => void;
+  onDelete: (expense: Expense) => void;
 };
 
 export function ActivityFeed({
@@ -115,7 +115,7 @@ export function ActivityFeed({
                           <button
                             type="button"
                             className="feed-delete-btn"
-                            onClick={() => onDelete(expense.id)}
+                            onClick={() => onDelete(expense)}
                             title="Delete expense"
                             aria-label="Delete expense"
                           >

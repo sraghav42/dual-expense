@@ -1430,6 +1430,90 @@ button, input, select, textarea {
   color: var(--text-primary);
 }
 
+/* Delete Confirmation Modal */
+.delete-confirm-modal {
+  max-width: 400px;
+}
+
+.delete-eyebrow .dot.destructive {
+  background: var(--error);
+}
+
+.delete-expense-preview {
+  margin: 24px 0;
+  padding: 20px;
+  background: var(--surface-container-low);
+  border-radius: 12px;
+  border: 1px solid var(--outline-light);
+}
+
+.delete-expense-amount {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.delete-expense-description {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.delete-expense-meta,
+.delete-expense-payer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.delete-expense-meta .material-symbols-outlined,
+.delete-expense-payer .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.payer-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface-container);
+  font-weight: 500;
+}
+
+.modal-delete-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 10px;
+  border: none;
+  background: var(--error);
+  color: var(--on-error);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.modal-delete-btn:hover {
+  background: #c62828;
+}
+
+.modal-delete-btn:active {
+  transform: scale(0.99);
+}
+
+.modal-delete-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
 /* --------------------------------------------------------------------------
    Responsive Breakpoints
    -------------------------------------------------------------------------- */

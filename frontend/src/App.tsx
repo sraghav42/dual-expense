@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { ActivityFeed } from './ActivityFeed';
 import { CategoryBarChart } from './CategoryBarChart';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 import {
   Category,
   DashboardSummary,
@@ -46,6 +47,7 @@ export default function App() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
 
   const [form, setForm] = useState(() => createDefaultFormState());
   const [selectedMonth, setSelectedMonth] = useState(() => month());
@@ -154,12 +156,17 @@ export default function App() {
     setTimeout(() => setSuccessMessage(null), 2500);
   };
 
-  const handleDelete = async (expenseId: number) => {
-    const confirmed = window.confirm('Delete this expense?');
-    if (!confirmed) {
+  const handleDeleteClick = (expense: Expense) => {
+    setDeletingExpense(expense);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingExpense) {
       return;
     }
 
+    const expenseId = deletingExpense.id;
+    setDeletingExpense(null);
     setDeleteError(null);
 
     try {
@@ -173,6 +180,10 @@ export default function App() {
     } catch (error) {
       setDeleteError(error instanceof Error ? error.message : 'Unable to delete expense.');
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingExpense(null);
   };
 
   const isCurrentMonth = selectedMonth === currentMonth;
@@ -442,7 +453,7 @@ export default function App() {
             selectedPayerFilter={selectedPayerFilter}
             onPayerFilterChange={setSelectedPayerFilter}
             deleteError={deleteError}
-            onDelete={(expenseId) => void handleDelete(expenseId)}
+            onDelete={handleDeleteClick}
           />
         )}
       </main>
@@ -643,6 +654,15 @@ export default function App() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingExpense && (
+        <DeleteConfirmModal
+          expense={deletingExpense}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+        />
       )}
     </div>
   );

@@ -12,6 +12,7 @@ type Props = {
   onPayerFilterChange: (value: 'all' | string) => void;
   deleteError: string | null;
   onDelete: (expense: Expense) => void;
+  onEdit: (expense: Expense) => void;
 };
 
 export function ActivityFeed({
@@ -23,6 +24,7 @@ export function ActivityFeed({
   onPayerFilterChange,
   deleteError,
   onDelete,
+  onEdit,
 }: Props) {
   const filteredExpenses =
     selectedPayerFilter === 'all'
@@ -112,6 +114,15 @@ export function ActivityFeed({
 
                         <div className="feed-item-right">
                           <div className="feed-amount">{formatUsd(expense.amount)}</div>
+                          <button
+                            type="button"
+                            className="feed-edit-btn"
+                            onClick={() => onEdit(expense)}
+                            title="Edit expense"
+                            aria-label="Edit expense"
+                          >
+                            <span className="material-symbols-outlined">edit</span>
+                          </button>
                           <button
                             type="button"
                             className="feed-delete-btn"

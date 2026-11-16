@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -198,6 +199,50 @@ class ExpenseControllerTest {
     @Test
     void deleteExpenseReturnsNotFoundForUnknownExpense() throws Exception {
         mockMvc.perform(delete("/api/v1/expenses/{id}", 999999L))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error").value("Expense not found"));
+    }
+
+    @Test
+    void updateExpenseChangesExistingExpense() throws Exception {
+        User user = userRepository.findByName(FIRST_USER_NAME).orElseThrow();
+        Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
+        Category dining = categoryRepository.findByName("Dining").orElseThrow();
+        Expense saved = expenseRepository.save(new Expense(BigDecimal.valueOf(25.00), today().minusDays(3), user, groceries, "Bread"));
+
+        mockMvc.perform(put("/api/v1/expenses/{id}", saved.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{" +
+                        "\"amount\":\"42.50\"," +
+                        "\"expenseDate\":\"%s\"," +
+                        "\"payerId\":%d," +
+                        "\"categoryId\":%d," +
+                        "\"description\":\"Updated\"" +
+                        "}", today(), user.getId(), dining.getId())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(saved.getId()))
+            .andExpect(jsonPath("$.amount").value(42.50))
+            .andExpect(jsonPath("$.categoryName").value("Dining"))
+            .andExpect(jsonPath("$.description").value("Updated"));
+
+        mockMvc.perform(get("/api/v1/expenses")
+                .param("month", currentMonth().toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].amount").value(42.50))
+            .andExpect(jsonPath("$[0].description").value("Updated"));
+    }
+
+    @Test
+    void updateExpenseReturnsNotFoundForUnknownExpense() throws Exception {
+        mockMvc.perform(put("/api/v1/expenses/{id}", 999999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(String.format("{" +
+                        "\"amount\":\"42.50\"," +
+                        "\"expenseDate\":\"%s\"," +
+                        "\"payerId\":1," +
+                        "\"categoryId\":1," +
+                        "\"description\":\"Test\"" +
+                        "}", today())))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.error").value("Expense not found"));
     }

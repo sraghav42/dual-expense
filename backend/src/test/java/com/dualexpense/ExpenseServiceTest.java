@@ -134,6 +134,62 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void updateExpenseChangesExistingExpense() {
+        User user = userRepository.findByName("User 1").orElseThrow();
+        Category groceries = categoryRepository.findByName("Groceries").orElseThrow();
+        Category dining = categoryRepository.findByName("Dining").orElseThrow();
+
+        Expense saved = expenseRepository.save(new Expense(BigDecimal.valueOf(25.00), today().minusDays(3), user, groceries, "Old"));
+
+        Expense updated = expenseService.updateExpense(saved.getId(), BigDecimal.valueOf(42.50), today(), user.getId(), dining.getId(), "Updated");
+
+        assertThat(updated.getId()).isEqualTo(saved.getId());
+        assertThat(updated.getAmount()).isEqualByComparingTo("42.50");
+        assertThat(updated.getCategory().getName()).isEqualTo("Dining");
+        assertThat(updated.getDescription()).isEqualTo("Updated");
+    }
+
+    @Test
+    void updateExpenseRejectsInvalidInput() {
+        User user = userRepository.findByName("User 1").orElseThrow();
+        Category category = categoryRepository.findByName("Groceries").orElseThrow();
+
+        Expense saved = expenseRepository.save(new Expense(BigDecimal.valueOf(25.00), today().minusDays(3), user, category, "Old"));
+
+        // Invalid amount
+        assertThatThrownBy(() -> expenseService.updateExpense(saved.getId(), BigDecimal.ZERO, today(), user.getId(), category.getId(), "Bad"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("positive");
+
+        // Future date
+        assertThatThrownBy(() -> expenseService.updateExpense(saved.getId(), BigDecimal.valueOf(42.00), today().plusDays(1), user.getId(), category.getId(), "Soon"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("today or earlier");
+
+        // Long description
+        String longDescription = "x".repeat(256);
+        assertThatThrownBy(() -> expenseService.updateExpense(saved.getId(), BigDecimal.valueOf(42.00), today(), user.getId(), category.getId(), longDescription))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("255 characters or fewer");
+
+        // Unknown payer
+        assertThatThrownBy(() -> expenseService.updateExpense(saved.getId(), BigDecimal.valueOf(42.00), today(), 9999L, category.getId(), "Bad payer"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Invalid payer");
+
+        // Unknown category
+        assertThatThrownBy(() -> expenseService.updateExpense(saved.getId(), BigDecimal.valueOf(42.00), today(), user.getId(), 9999L, "Bad category"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Invalid category");
+    }
+
+    @Test
+    void updateExpenseThrowsNotFoundForUnknownExpense() {
+        assertThatThrownBy(() -> expenseService.updateExpense(999999L, BigDecimal.valueOf(42.00), today(), 1L, 1L, "Test"))
+            .isInstanceOf(com.dualexpense.exception.ExpenseNotFoundException.class);
+    }
+
+    @Test
     void summaryReturnsMonthlyTotals() {
         DashboardSummary summary = expenseService.getSummaryForMonth(today().getYear(), today().getMonthValue());
 

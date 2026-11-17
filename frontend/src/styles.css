@@ -927,6 +927,29 @@ button, input, select, textarea {
   font-size: 18px;
 }
 
+.feed-edit-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.feed-edit-btn:hover {
+  background: var(--primary-container);
+  color: var(--primary);
+}
+
+.feed-edit-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
 .feed-empty-state {
   border: 1px dashed var(--outline);
   background: var(--surface-container-low);

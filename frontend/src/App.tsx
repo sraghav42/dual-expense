@@ -41,6 +41,7 @@ export default function App() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [selectedPayerFilter, setSelectedPayerFilter] = useState<'all' | string>('all');
   const [activeNavTab, setActiveNavTab] = useState<'dashboard' | 'all-expenses'>('dashboard');
 
@@ -129,8 +130,12 @@ export default function App() {
       description: form.description,
     };
 
-    const response = await fetch('/api/v1/expenses', {
-      method: 'POST',
+    const isEdit = editingExpense !== null;
+    const url = isEdit ? `/api/v1/expenses/${editingExpense.id}` : '/api/v1/expenses';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
@@ -141,6 +146,9 @@ export default function App() {
       return;
     }
 
+    // Clear editing state first, then reset form
+    setEditingExpense(null);
+
     const defaultPayerId = users[0] ? users[0].id : Number(form.payerId) || undefined;
     const defaultCategoryId = categories[0] ? categories[0].id : Number(form.categoryId) || undefined;
 
@@ -150,14 +158,30 @@ export default function App() {
       description: '',
       expenseDate: todayISO(),
     });
-    setSuccessMessage('Expense added successfully to ledger.');
+    setSuccessMessage(isEdit ? 'Expense updated successfully.' : 'Expense added successfully to ledger.');
     await loadData(activeMonth);
-    document.getElementById('expense-amount-input')?.focus();
+    if (!isEdit) {
+      document.getElementById('expense-amount-input')?.focus();
+    }
     setTimeout(() => setSuccessMessage(null), 2500);
   };
 
   const handleDeleteClick = (expense: Expense) => {
     setDeletingExpense(expense);
+  };
+
+  const handleEditClick = (expense: Expense) => {
+    setSubmitError(null);
+    setSuccessMessage(null);
+    setForm({
+      amount: expense.amount.toFixed(2),
+      payerId: String(expense.payerId),
+      categoryId: String(expense.categoryId),
+      description: expense.description ?? '',
+      expenseDate: expense.expenseDate,
+    });
+    setEditingExpense(expense);
+    setIsAddModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -274,6 +298,10 @@ export default function App() {
               onClick={() => {
                 setSubmitError(null);
                 setSuccessMessage(null);
+                setEditingExpense(null);
+                const defaultPayerId = users[0]?.id;
+                const defaultCategoryId = categories[0]?.id;
+                setForm(createDefaultFormState(defaultPayerId, defaultCategoryId));
                 setIsAddModalOpen(true);
               }}
             >
@@ -454,6 +482,7 @@ export default function App() {
             onPayerFilterChange={setSelectedPayerFilter}
             deleteError={deleteError}
             onDelete={handleDeleteClick}
+            onEdit={handleEditClick}
           />
         )}
       </main>
@@ -463,7 +492,10 @@ export default function App() {
         <div
           className="modal-backdrop"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setIsAddModalOpen(false);
+            if (e.target === e.currentTarget) {
+              setEditingExpense(null);
+              setIsAddModalOpen(false);
+            }
           }}
         >
           <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -473,13 +505,16 @@ export default function App() {
                   <span className="dot" />
                   <span>Expense Entry</span>
                 </div>
-                <h2 id="modal-title">Log New Expense</h2>
+                <h2 id="modal-title">{editingExpense ? 'Edit Expense' : 'Log New Expense'}</h2>
                 <p className="modal-subtitle">Record an expenditure for the household ledger</p>
               </div>
               <button
                 type="button"
                 className="modal-close-btn"
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => {
+                  setEditingExpense(null);
+                  setIsAddModalOpen(false);
+                }}
                 title="Close"
                 aria-label="Close"
               >
@@ -640,13 +675,16 @@ export default function App() {
               {/* Actions */}
               <div className="modal-actions-row">
                 <button type="submit" className="modal-submit-btn">
-                  <span className="material-symbols-outlined">add_task</span>
-                  <span>Add Expense</span>
+                  <span className="material-symbols-outlined">{editingExpense ? 'save' : 'add_task'}</span>
+                  <span>{editingExpense ? 'Save Changes' : 'Add Expense'}</span>
                 </button>
                 <button
                   type="button"
                   className="modal-cancel-btn"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => {
+                    setEditingExpense(null);
+                    setIsAddModalOpen(false);
+                  }}
                 >
                   Cancel
                 </button>

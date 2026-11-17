@@ -126,6 +126,23 @@ public class ExpenseService {
         logger.info("Deleted expense id={}", expenseId);
     }
 
+    @Transactional
+    public Expense updateExpense(Long expenseId, BigDecimal amount, LocalDate expenseDate, Long payerId, Long categoryId, String description) {
+        Expense expense = expenseRepository.findById(expenseId)
+            .orElseThrow(() -> new ExpenseNotFoundException("Expense not found"));
+
+        validateExpense(amount, expenseDate, payerId, categoryId, description);
+
+        User payer = userRepository.findById(payerId)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid payer"));
+        Category category = categoryRepository.findById(categoryId)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid category"));
+
+        expense.update(amount, expenseDate, payer, category, description);
+        logger.info("Updated expense id={}", expenseId);
+        return expense;
+    }
+
     private void validateExpense(BigDecimal amount, LocalDate expenseDate, Long payerId, Long categoryId, String description) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Amount must be positive");

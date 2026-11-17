@@ -87,4 +87,12 @@ public class Expense {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public void update(BigDecimal amount, LocalDate expenseDate, User payer, Category category, String description) {
+        this.amount = amount;
+        this.expenseDate = expenseDate;
+        this.payer = payer;
+        this.category = category;
+        this.description = description;
+    }
 }
